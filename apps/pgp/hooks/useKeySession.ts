@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   MasterPasskey,
@@ -580,17 +580,32 @@ export function useKeySession(opts: KeySessionOptions) {
     [store],
   );
 
-  return {
-    unlockWithPassword,
-    unlockWithPasskey,
-    unlockAllWithMasterPrf,
-    lock,
-    lockAll: doLockAll,
-    lockAllIfNoCache,
-    resetLockTimer,
-    getKeyHandle,
-    isUnlocked,
-    unlockedKeyIds,
-    cacheKeyHandle,
-  };
+  return useMemo(
+    () => ({
+      unlockWithPassword,
+      unlockWithPasskey,
+      unlockAllWithMasterPrf,
+      lock,
+      lockAll: doLockAll,
+      lockAllIfNoCache,
+      resetLockTimer,
+      getKeyHandle,
+      isUnlocked,
+      unlockedKeyIds,
+      cacheKeyHandle,
+    }),
+    [
+      unlockWithPassword,
+      unlockWithPasskey,
+      unlockAllWithMasterPrf,
+      lock,
+      doLockAll,
+      lockAllIfNoCache,
+      resetLockTimer,
+      getKeyHandle,
+      isUnlocked,
+      unlockedKeyIds,
+      cacheKeyHandle,
+    ],
+  );
 }

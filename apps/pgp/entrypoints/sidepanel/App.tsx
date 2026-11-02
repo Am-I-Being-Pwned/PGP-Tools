@@ -5,6 +5,8 @@ import { Button } from "@amibeingpwned/ui/button";
 
 import type { WorkspaceIntake } from "../../components/workspace/useWorkspaceState";
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
+import type { Tab } from "../../hooks/useNav";
+import type { VaultServices } from "../../hooks/useVault";
 import type { DropRule } from "../../lib/drop-routing";
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
@@ -25,9 +27,11 @@ import { useContacts } from "../../hooks/useContacts";
 import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useKeyring } from "../../hooks/useKeyring";
 import { useKeySession } from "../../hooks/useKeySession";
+import { NavContext, useNavState } from "../../hooks/useNav";
 import { usePendingOperation } from "../../hooks/usePendingOperation";
 import { savePreference, usePreferences } from "../../hooks/usePreferences";
 import { useReaderTabs } from "../../hooks/useReaderTabs";
+import { VaultContext } from "../../hooks/useVault";
 import { useVaultLifecycle } from "../../hooks/useVaultLifecycle";
 import { SESSION_PENDING_OP } from "../../lib/constants";
 import { normalizeCrxPadding } from "../../lib/crx/storage";
@@ -60,10 +64,9 @@ import {
   encryptWorkspaceDraft,
 } from "../../lib/workspace-draft";
 
-type Tab = "workspace" | "keys" | "settings";
-
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("workspace");
+  const nav = useNavState();
+  const activeTab = nav.tab;
   const prefs = usePreferences();
   const {
     storageLocation,
@@ -81,28 +84,11 @@ export default function App() {
   const { phase } = vault;
   const masterProtection = protectionOf(phase);
   const masterUnlocked = phase.kind === "open";
-  // A key handed to the app from outside the Keys tab (pasted in the
-  // workspace, dropped on the window, sent by the context menu). It opens
-  // the import panel OVER whatever the user is looking at: routing them
-  // to the Keys tab first meant Back dumped them on a tab they never
-  // asked for, and the panel's slide-out flashed it on the way past.
-  const [importPrefill, setImportPrefill] = useState<string | null>(null);
-  /** A key lookup to open the import panel on (an unknown signer's id). */
-  const [importLookup, setImportLookup] = useState<string | null>(null);
-  // Keys to scroll to and pulse on the Keys tab: a "show it in your
-  // keys" action, or the View key button on an import's toast.
-  const [highlightKeyIds, setHighlightKeyIds] = useState<string[] | null>(null);
-  const [encryptToKeyId, setEncryptToKeyId] = useState<string | null>(null);
   // A file/text drop routed to the workspace by the global dropzone. The
   // nonce bumps on every drop so re-dropping the same files re-applies.
   const [workspaceIntake, setWorkspaceIntake] =
     useState<WorkspaceIntake | null>(null);
   const workspaceIntakeNonce = useRef(0);
-  // True once a pending context-menu op has been routed. Preferences no
-  // longer carry a tab, so nothing can clobber that routing any more --
-  // the flag survives only to keep the pending op from being handled
-  // twice.
-  const pendingRoutedRef = useRef(false);
 
   const masterLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -400,23 +386,22 @@ export default function App() {
     void normalizeCrxPadding().catch(ignore);
   }, [masterUnlocked]);
 
+  const { openImport, showTab } = nav;
   useEffect(() => {
     if (!pending) return;
     if (
       pending.action === "import-public" ||
       pending.action === "import-private"
     ) {
-      pendingRoutedRef.current = true;
-      setImportPrefill(pending.text);
+      openImport({ prefill: pending.text });
       clearPending();
       return;
     }
-    pendingRoutedRef.current = true;
     // A keyboard mode command carries no text: it must not discard a
     // locked workspace draft the way a real selection does.
     if (pending.text) setDraftCiphertext(null);
-    setActiveTab("workspace");
-  }, [pending, clearPending]);
+    showTab("workspace");
+  }, [pending, clearPending, openImport, showTab]);
 
   // One-shot focus of the message input when the panel opens onto the
   // Main tab (which is every launch). Waits for masterProtectionLoaded
@@ -445,53 +430,6 @@ export default function App() {
   const [workspaceBridge, setWorkspaceBridge] =
     useState<WorkspaceOpsBridge | null>(null);
 
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [keysRoute, setKeysRoute] = useState<"generate" | "import" | null>(
-    null,
-  );
-  // One-shot request for Settings to open its security-presets subpage
-  // (the "Open security presets" palette action), keysRoute-style.
-  const [presetsRoute, setPresetsRoute] = useState(false);
-
-  const changeTab = useCallback((tab: Tab) => {
-    setActiveTab(tab);
-    toast.dismiss();
-  }, []);
-
-  /** Open the import panel over the current tab. Pasting a
-   *  correspondent's key mid-encrypt shouldn't move you anywhere: the
-   *  panel covers the screen, and closing it leaves you where you were. */
-  const routeToImport = (armored: string) => setImportPrefill(armored);
-
-  /** Show keys in the Keys list, highlighted. Only ever called from an
-   *  explicit request ("Show it in your keys", a toast's View key) --
-   *  nothing moves the user between tabs on its own. */
-  const revealKeys = (keyIds: string[]) => {
-    if (keyIds.length === 0) return;
-    setHighlightKeyIds(keyIds);
-    setActiveTab("keys");
-  };
-
-  const openHistory = useCallback(() => setHistoryOpen(true), []);
-  const openKeysRoute = useCallback(
-    (route: "generate" | "import") => {
-      setKeysRoute(route);
-      changeTab("keys");
-    },
-    [changeTab],
-  );
-  const openGenerate = useCallback(
-    () => openKeysRoute("generate"),
-    [openKeysRoute],
-  );
-  const openImport = useCallback(
-    () => openKeysRoute("import"),
-    [openKeysRoute],
-  );
-  const openSecurityPresets = useCallback(() => {
-    setPresetsRoute(true);
-    changeTab("settings");
-  }, [changeTab]);
   const lockNow = useCallback(() => void doMasterLock(), [doMasterLock]);
 
   // The palette registers its imperative open() here so the footer's
@@ -504,17 +442,17 @@ export default function App() {
 
   const actionCtx = useActionContext({
     tab: activeTab,
-    setTab: changeTab,
+    setTab: nav.showTab,
     workspace: workspaceBridge,
     counts: {
       ownKeys: keyring.keys.length,
       contacts: contacts.contacts.length,
     },
     neverCacheKeys,
-    openHistory,
-    openGenerate,
-    openImport,
-    openSecurityPresets,
+    openHistory: nav.openHistory,
+    openGenerate: () => nav.openKeysRoute("generate"),
+    openImport: () => nav.openKeysRoute("import"),
+    openSecurityPresets: nav.openPresets,
     lockNow,
   });
 
@@ -549,6 +487,48 @@ export default function App() {
 
   const clearWorkspaceIntake = useCallback(() => setWorkspaceIntake(null), []);
 
+  const masterPasskey = useMemo(
+    () => masterPasskeyOf(masterProtection),
+    [masterProtection],
+  );
+  // New keys share the master SALT (not just its credential) only while
+  // "unlock keys with the vault" is on: that is what lets the vault
+  // ceremony open them.
+  const masterSealSalt = useMemo(
+    () =>
+      unlockKeysOnOpen && masterPasskey
+        ? fromBase64(masterPasskey.prfSalt).buffer
+        : undefined,
+    [unlockKeysOnOpen, masterPasskey],
+  );
+  const vaultServices = useMemo<VaultServices>(
+    () => ({
+      session,
+      masterPasskey,
+      masterPasskeyCredentialId:
+        masterProtection?.method === "passkey"
+          ? masterProtection.credentialId
+          : undefined,
+      masterSealSalt,
+      cacheKeys: !neverCacheKeys,
+      onKeyCached: (keyId, handle) =>
+        void session.cacheKeyHandle(keyId, handle),
+      addKey: handleAddKey,
+      deleteKey: handleDeleteKey,
+      setDefaultKey: handleSetDefaultKey,
+    }),
+    [
+      session,
+      masterPasskey,
+      masterProtection,
+      masterSealSalt,
+      neverCacheKeys,
+      handleAddKey,
+      handleDeleteKey,
+      handleSetDefaultKey,
+    ],
+  );
+
   // Routing table for the global dropzone. First match wins; the final
   // rule is the catch-all. Extend by adding a rule (see lib/drop-routing).
   const dropRules: DropRule[] = [
@@ -566,7 +546,7 @@ export default function App() {
           ? text
           : await readAllFilesText(files);
         if (!armored.trim()) return;
-        routeToImport(armored);
+        nav.openImport({ prefill: armored });
       },
     },
     {
@@ -580,7 +560,7 @@ export default function App() {
           nonce: workspaceIntakeNonce.current,
         });
         setDraftCiphertext(null);
-        setActiveTab("workspace");
+        nav.showTab("workspace");
       },
     },
   ];
@@ -729,231 +709,129 @@ export default function App() {
     );
   }
 
-  const masterPasskeyCredentialId =
-    masterProtection?.method === "passkey"
-      ? masterProtection.credentialId
-      : undefined;
-  const masterPasskey = masterPasskeyOf(masterProtection);
-  // Only while the option is on do new keys get sealed under the master
-  // SALT (not just the master credential): sharing the salt is what lets
-  // the vault ceremony open them, and that is the opt-in.
-  const masterSealSalt =
-    unlockKeysOnOpen && masterPasskey
-      ? fromBase64(masterPasskey.prfSalt).buffer
-      : undefined;
-
   return (
-    <GlobalDropZone rules={dropRules}>
-      <div className="flex h-screen flex-col">
-        <TabBar
-          activeTab={activeTab}
-          onTabChange={changeTab}
-          trailing={
-            // History belongs to the workspace, and to a workspace that
-            // can have any: never-cache means no history, ever, so the
-            // viewer disappears rather than opening onto nothing.
-            activeTab === "workspace" && !neverCacheKeys ? (
-              <button
-                type="button"
-                onClick={openHistory}
-                title={t("actions_history")}
-                aria-label={t("actions_history")}
-                // Out of the Tab order, as it was beside the toggles:
-                // keyboard users reach history via the palette.
-                tabIndex={-1}
-                className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-[30px] items-center justify-center rounded-md transition-colors"
-              >
-                <HistoryIcon className="h-4 w-4" />
-              </button>
-            ) : undefined
-          }
-        />
-
-        {/* A sealed store came back older than this device last saw it,
-            or went missing (lib/storage/integrity.ts). */}
-        <IntegrityBanner
-          syncVault={storageLocation === "sync"}
-          onAcknowledged={() => {
-            // A lost ledger, or a held older settings copy, kept the
-            // settings at the strictest preset until now; read them as
-            // stored again.
-            void preferencesStore.reload();
-          }}
-        />
-
-        <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
-
-        {/* A key that arrived from outside the Keys tab. The panel covers
-            the whole side panel, so it opens in place -- no tab switch to
-            flash past on the way in or out. */}
-        {(importPrefill !== null || importLookup !== null) && (
-          <ImportKeyPage
-            onClose={() => {
-              setImportPrefill(null);
-              setImportLookup(null);
-            }}
-            onImportPrivate={handleAddKey}
-            onImportPublic={contacts.add}
-            onRemoveContact={contacts.remove}
-            existingKeys={keyring.keys}
-            existingContacts={contacts.contacts}
-            reusePasskeyCredentialId={masterPasskeyCredentialId}
-            masterSealSalt={masterSealSalt}
-            initialArmored={importPrefill}
-            initialLookup={importLookup}
-            keyDiscoveryEnabled={keyDiscoveryEnabled}
-            crxSigningEnabled={crxSigningEnabled}
-            onImportCrx={crxKeys.add}
-            onImported={(keyIds, opts) => {
-              if (keyIds.length === 0) return;
-              // "Show it in your keys" is an explicit request to go and
-              // look, so it navigates.
-              if (opts?.reveal) {
-                revealKeys(keyIds);
-                return;
+    <VaultContext value={vaultServices}>
+      <NavContext value={nav}>
+        <GlobalDropZone rules={dropRules}>
+          <div className="flex h-screen flex-col">
+            <TabBar
+              activeTab={activeTab}
+              onTabChange={nav.showTab}
+              trailing={
+                // Never-cache means no history, so no viewer either.
+                activeTab === "workspace" && !neverCacheKeys ? (
+                  <button
+                    type="button"
+                    onClick={nav.openHistory}
+                    title={t("actions_history")}
+                    aria-label={t("actions_history")}
+                    // Out of the Tab order; keyboard users have the palette.
+                    tabIndex={-1}
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-[30px] items-center justify-center rounded-md transition-colors"
+                  >
+                    <HistoryIcon className="h-4 w-4" />
+                  </button>
+                ) : undefined
               }
-              // An import does NOT move the user: they were in the middle
-              // of something. If they're already on the Keys tab the card
-              // pulses; otherwise the toast reports it and carries the
-              // trip to the key as a button they can ignore.
-              if (activeTab === "keys") {
-                setHighlightKeyIds(keyIds);
-                return;
-              }
-              toast.success(tn("app_import_added", keyIds.length), {
-                id: "import-added",
-                action: {
-                  label: tn("app_import_view_key", keyIds.length),
-                  onClick: () => revealKeys(keyIds),
-                },
-              });
-            }}
-          />
-        )}
-        {historyOpen && (
-          <HistoryPage
-            enabled={prefs.historyEnabled}
-            onClose={() => setHistoryOpen(false)}
-          />
-        )}
+            />
 
-        <main
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
-          role="tabpanel"
-          id={`tabpanel-${activeTab}`}
-          aria-labelledby={`tab-${activeTab}`}
-        >
-          <div className={activeTab === "workspace" ? "h-full" : "hidden"}>
-            <WorkspaceView
-              myKeys={keyring.keys}
-              contacts={contacts.contacts}
-              crxKeys={crxKeys.keys}
-              getKeyHandle={session.getKeyHandle}
-              onUnlockWithPassword={session.unlockWithPassword}
-              onUnlockWithPasskey={session.unlockWithPasskey}
-              vaultSettling={
-                phase.opening || keyring.loading || contacts.loading
-              }
-              awaitingPendingOp={!pendingChecked}
-              onOpenReply={openReader}
-              pendingAction={
-                pending &&
-                (pending.action === "encrypt" ||
-                  pending.action === "decrypt" ||
-                  pending.action === "sign" ||
-                  pending.action === "verify")
-                  ? { action: pending.action, text: pending.text }
-                  : null
-              }
-              onClearPending={clearPending}
-              encryptToKeyId={encryptToKeyId}
-              onClearEncryptTo={() => setEncryptToKeyId(null)}
-              onRevealKey={(keyId) => revealKeys([keyId])}
-              onLookupSigner={keyDiscoveryEnabled ? setImportLookup : undefined}
-              onNavigateToKeys={(prefill) => {
-                if (prefill) {
-                  routeToImport(prefill);
-                  return;
+            {/* A sealed store came back older than this device last saw
+                it, or went missing (lib/storage/integrity.ts). */}
+            <IntegrityBanner
+              syncVault={storageLocation === "sync"}
+              // Settings sat at the strictest preset until acknowledged.
+              onAcknowledged={() => void preferencesStore.reload()}
+            />
+
+            <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
+
+            {/* Opens over the current tab: no tab switch to flash past. */}
+            {nav.importing && (
+              <ImportKeyPage
+                onClose={nav.closeImport}
+                onImportPrivate={handleAddKey}
+                onImportPublic={contacts.add}
+                onRemoveContact={contacts.remove}
+                existingKeys={keyring.keys}
+                existingContacts={contacts.contacts}
+                reusePasskeyCredentialId={
+                  vaultServices.masterPasskeyCredentialId
                 }
-                setActiveTab("keys");
-              }}
-              onOperationComplete={session.lockAllIfNoCache}
-              restoreDraft={draftCiphertext}
-              onDraftRestored={handleDraftRestored}
-              onRegisterDraftSource={registerDraftSource}
-              intake={workspaceIntake}
-              onIntakeConsumed={clearWorkspaceIntake}
-              onPaletteOps={setWorkspaceBridge}
-            />
-          </div>
-          {activeTab === "keys" && (
-            <KeysView
-              myKeys={keyring.keys}
-              contacts={contacts.contacts}
-              crxKeys={crxKeys.keys}
-              onAddCrxKey={crxKeys.add}
-              onDeleteCrxKey={crxKeys.remove}
-              onSetDefaultKey={handleSetDefaultKey}
-              onRenameKey={keyring.rename}
-              onRenameContact={contacts.rename}
-              onRenameCrxKey={crxKeys.rename}
-              contactsLocked={false}
-              isUnlocked={session.isUnlocked}
-              onUnlockWithPassword={session.unlockWithPassword}
-              onUnlockWithPasskey={session.unlockWithPasskey}
-              onLock={session.lock}
-              onDeleteKey={handleDeleteKey}
-              getKeyHandle={session.getKeyHandle}
-              onSaveRevocationCertificate={keyring.setRevocationCertificate}
-              onAddKey={handleAddKey}
-              onAddContact={contacts.add}
-              onMergeContactKey={contacts.mergeKey}
-              onSetContactVerified={contacts.setVerified}
-              onDeleteContact={contacts.remove}
-              highlightKeyIds={highlightKeyIds}
-              onHighlightConsumed={() => setHighlightKeyIds(null)}
-              autoOpenRoute={keysRoute}
-              onAutoOpenRouteConsumed={() => setKeysRoute(null)}
-              onEncryptTo={(keyId) => {
-                setEncryptToKeyId(keyId);
-                setActiveTab("workspace");
-              }}
-              primaryPasskeyCredentialId={masterPasskeyCredentialId}
-              masterSealSalt={masterSealSalt}
-              cacheKeys={!neverCacheKeys}
-              onKeyCached={(keyId, handle) => {
-                void session.cacheKeyHandle(keyId, handle);
-              }}
-            />
-          )}
-          {activeTab === "settings" && (
-            <SettingsView
-              onVaultMoved={() => {
-                void refreshVaultLists();
-              }}
-              masterPasskey={masterPasskey}
-              masterSealSalt={masterSealSalt}
-              myKeys={keyring.keys}
-              contacts={contacts.contacts}
-              isUnlocked={session.isUnlocked}
-              getKeyHandle={session.getKeyHandle}
-              onUnlockWithPassword={session.unlockWithPassword}
-              onUnlockWithPasskey={session.unlockWithPasskey}
-              onAddKey={handleAddKey}
-              onAddContact={contacts.add}
-              onRemoveContact={contacts.remove}
-              crxKeys={crxKeys.keys}
-              onAddCrxKey={crxKeys.add}
-              primaryPasskeyCredentialId={masterPasskeyCredentialId}
-              autoOpenPresets={presetsRoute}
-              onAutoOpenPresetsConsumed={() => setPresetsRoute(false)}
-            />
-          )}
-        </main>
+                masterSealSalt={masterSealSalt}
+                initialArmored={nav.importing.prefill}
+                initialLookup={nav.importing.lookup}
+                keyDiscoveryEnabled={keyDiscoveryEnabled}
+                crxSigningEnabled={crxSigningEnabled}
+                onImportCrx={crxKeys.add}
+                onImported={(keyIds, opts) => {
+                  if (keyIds.length === 0) return;
+                  if (opts?.reveal) {
+                    nav.revealKeys(keyIds);
+                    return;
+                  }
+                  // An import never moves the user: on the Keys tab the
+                  // card pulses, elsewhere a toast offers the trip.
+                  if (activeTab === "keys") {
+                    nav.highlightKeys(keyIds);
+                    return;
+                  }
+                  toast.success(tn("app_import_added", keyIds.length), {
+                    id: "import-added",
+                    action: {
+                      label: tn("app_import_view_key", keyIds.length),
+                      onClick: () => nav.revealKeys(keyIds),
+                    },
+                  });
+                }}
+              />
+            )}
+            {nav.historyOpen && (
+              <HistoryPage
+                enabled={prefs.historyEnabled}
+                onClose={nav.closeHistory}
+              />
+            )}
 
-        <AppFooter onOpenPalette={openPalette} />
-      </div>
-    </GlobalDropZone>
+            <main
+              className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
+              role="tabpanel"
+              id={`tabpanel-${activeTab}`}
+              aria-labelledby={`tab-${activeTab}`}
+            >
+              <div className={activeTab === "workspace" ? "h-full" : "hidden"}>
+                <WorkspaceView
+                  vaultSettling={
+                    phase.opening || keyring.loading || contacts.loading
+                  }
+                  awaitingPendingOp={!pendingChecked}
+                  onOpenReply={openReader}
+                  pendingAction={
+                    pending &&
+                    (pending.action === "encrypt" ||
+                      pending.action === "decrypt" ||
+                      pending.action === "sign" ||
+                      pending.action === "verify")
+                      ? { action: pending.action, text: pending.text }
+                      : null
+                  }
+                  onClearPending={clearPending}
+                  restoreDraft={draftCiphertext}
+                  onDraftRestored={handleDraftRestored}
+                  onRegisterDraftSource={registerDraftSource}
+                  intake={workspaceIntake}
+                  onIntakeConsumed={clearWorkspaceIntake}
+                  onPaletteOps={setWorkspaceBridge}
+                />
+              </div>
+              {activeTab === "keys" && <KeysView />}
+              {activeTab === "settings" && <SettingsView />}
+            </main>
+
+            <AppFooter onOpenPalette={openPalette} />
+          </div>
+        </GlobalDropZone>
+      </NavContext>
+    </VaultContext>
   );
 }
 

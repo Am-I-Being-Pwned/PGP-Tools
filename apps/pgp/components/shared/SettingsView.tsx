@@ -5,18 +5,18 @@ import { Block, BlockStack } from "@amibeingpwned/ui/block";
 import { Button } from "@amibeingpwned/ui/button";
 import { Switch } from "@amibeingpwned/ui/switch";
 
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
-import type { ReviewedContact } from "../../lib/import/review";
 import type { PresetId } from "../../lib/presets";
-import type { MasterPasskey } from "../../lib/protection/vault-unlock";
-import type { PublicContactKey } from "../../lib/storage/contacts";
-import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type {
   AutoLockTimeout,
   PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
+import { useContacts } from "../../hooks/useContacts";
+import { useCrxKeys } from "../../hooks/useCrxKeys";
+import { useKeyring } from "../../hooks/useKeyring";
+import { useNav } from "../../hooks/useNav";
 import { savePreference, usePreferences } from "../../hooks/usePreferences";
+import { useVault } from "../../hooks/useVault";
 import { t, tn } from "../../lib/i18n";
 import { enterNeverCacheMode } from "../../lib/never-cache";
 import {
@@ -29,6 +29,7 @@ import { isQuotaExceeded } from "../../lib/storage/chunked";
 import { historyByteSize } from "../../lib/storage/history";
 import { getPreferences } from "../../lib/storage/preferences";
 import { preferencesStore } from "../../lib/storage/preferences-store";
+import { refreshVaultLists } from "../../lib/storage/vault-lists";
 import { moveVault } from "../../lib/storage/vault-state";
 import { toast } from "../../lib/toast";
 import { formatFileSize } from "../../lib/utils/formatting";
@@ -133,57 +134,29 @@ function autoLockLabel(minutes: AutoLockTimeout): string {
   return minutes === 60 ? t("shared_one_hour") : tn("shared_minutes", minutes);
 }
 
-interface SettingsViewProps {
-  /** The vault moved storage areas: its stores need reading again. */
-  onVaultMoved: () => void;
-  /** The master passkey, or null for a password master -- in which case
-   *  the unlock-on-open toggle is not offered (nothing to reuse). */
-  masterPasskey: MasterPasskey | null;
-  /** See `ImportAllKeysPage`. */
-  masterSealSalt?: ArrayBuffer;
-  // Backup (export/import all keys)
-  myKeys: ProtectedKeyBlob[];
-  contacts: PublicContactKey[];
-  isUnlocked: (keyId: string) => boolean;
-  getKeyHandle: (keyId: string) => number | null;
-  onUnlockWithPassword: (
-    blob: ProtectedKeyBlob,
-    password: string,
-  ) => Promise<boolean>;
-  onUnlockWithPasskey: (
-    blob: ProtectedKeyBlob,
-  ) => Promise<boolean | "cancelled">;
-  onAddKey: (blob: ProtectedKeyBlob) => Promise<void>;
-  onAddContact: (contact: ReviewedContact) => Promise<void>;
-  onRemoveContact: (keyId: string) => Promise<void>;
-  crxKeys?: CrxSigningKeyBlob[];
-  onAddCrxKey?: (blob: CrxSigningKeyBlob) => Promise<void>;
-  primaryPasskeyCredentialId?: string;
-  /** One-shot request to open the security-presets subpage (palette's
-   *  "Open security presets"); consumed via the callback below. */
-  autoOpenPresets?: boolean;
-  onAutoOpenPresetsConsumed?: () => void;
-}
-
-export function SettingsView({
-  onVaultMoved,
-  masterPasskey,
-  masterSealSalt,
-  myKeys,
-  contacts,
-  isUnlocked,
-  getKeyHandle,
-  onUnlockWithPassword,
-  onUnlockWithPasskey,
-  onAddKey,
-  onAddContact,
-  onRemoveContact,
-  crxKeys,
-  onAddCrxKey,
-  primaryPasskeyCredentialId,
-  autoOpenPresets,
-  onAutoOpenPresetsConsumed,
-}: SettingsViewProps) {
+export function SettingsView() {
+  const keyring = useKeyring();
+  const contactStore = useContacts();
+  const crx = useCrxKeys();
+  const { session, ...vault } = useVault();
+  const appNav = useNav();
+  const onVaultMoved = refreshVaultLists;
+  const masterPasskey = vault.masterPasskey;
+  const masterSealSalt = vault.masterSealSalt;
+  const myKeys = keyring.keys;
+  const contacts = contactStore.contacts;
+  const isUnlocked = session.isUnlocked;
+  const getKeyHandle = session.getKeyHandle;
+  const onUnlockWithPassword = session.unlockWithPassword;
+  const onUnlockWithPasskey = session.unlockWithPasskey;
+  const onAddKey = vault.addKey;
+  const onAddContact = contactStore.add;
+  const onRemoveContact = contactStore.remove;
+  const crxKeys = crx.keys;
+  const onAddCrxKey = crx.add;
+  const primaryPasskeyCredentialId = vault.masterPasskeyCredentialId;
+  const autoOpenPresets = appNav.presets;
+  const consumeIntent = appNav.consume;
   const prefs = usePreferences();
   const {
     advancedMode,
@@ -220,8 +193,8 @@ export function SettingsView({
   useEffect(() => {
     if (!autoOpenPresets) return;
     setShowPresets(true);
-    onAutoOpenPresetsConsumed?.();
-  }, [autoOpenPresets, onAutoOpenPresetsConsumed]);
+    consumeIntent("presets");
+  }, [autoOpenPresets, consumeIntent]);
 
   const currentPreset = activePreset(prefs);
 
@@ -234,7 +207,7 @@ export function SettingsView({
     try {
       await moveVault(storageLocation, next);
       await preferencesStore.reload();
-      onVaultMoved();
+      void onVaultMoved();
     } catch (e) {
       setError(
         isQuotaExceeded(e)

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -31,7 +31,6 @@ import {
 import { Switch } from "@amibeingpwned/ui/switch";
 
 import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
-import type { CrxSigningKeyBlob } from "../../lib/crx/types";
 import type { RemedyAction } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { ReaderSigner } from "../../lib/reader-protocol";
@@ -41,11 +40,16 @@ import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspaceState";
 import type { ComposeTools } from "./WorkspaceInput";
 import { useComposeTranslation } from "../../hooks/useComposeTranslation";
+import { useContacts } from "../../hooks/useContacts";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
+import { useKeyring } from "../../hooks/useKeyring";
+import { useNav } from "../../hooks/useNav";
 import { savePreference, usePreferences } from "../../hooks/usePreferences";
 import { useShortcut } from "../../hooks/useShortcut";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useVault } from "../../hooks/useVault";
 import {
   COPY_SHORTCUT,
   DOWNLOAD_SHORTCUT,
@@ -127,17 +131,6 @@ function ShortcutHint({
 }
 
 interface WorkspaceViewProps {
-  myKeys: ProtectedKeyBlob[];
-  contacts: PublicContactKey[];
-  crxKeys?: CrxSigningKeyBlob[];
-  getKeyHandle: (keyId: string) => number | null;
-  onUnlockWithPassword: (
-    blob: ProtectedKeyBlob,
-    password: string,
-  ) => Promise<boolean>;
-  onUnlockWithPasskey: (
-    blob: ProtectedKeyBlob,
-  ) => Promise<boolean | "cancelled">;
   pendingAction?: { action: WorkspaceAction; text: string } | null;
   onClearPending?: () => void;
   /** The vault's stores (keys, contacts) are still being read, or keys
@@ -150,15 +143,6 @@ interface WorkspaceViewProps {
   /** Open `text` in a reader tab (App's useReaderTabs). Resolves once
    *  the tab is opening; absent where Reply isn't offered. */
   onOpenReply?: (text: string, signer: ReaderSigner) => Promise<void>;
-  encryptToKeyId?: string | null;
-  onClearEncryptTo?: () => void;
-  onNavigateToKeys?: (importPrefill?: string) => void;
-  /** Take the user to a key they already hold, highlighted in the list. */
-  onRevealKey?: (keyId: string) => void;
-  /** Look an unknown signer's key id up on the keyserver (the import
-   *  panel, lookup already running). Absent when key discovery is off. */
-  onLookupSigner?: (keyId: string) => void;
-  onOperationComplete?: () => void;
   /** Encrypted workspace draft to rehydrate on mount (from a prior auto-lock). */
   restoreDraft?: Uint8Array | null;
   /** Fired once the draft has been decrypted + applied. */
@@ -174,23 +158,11 @@ interface WorkspaceViewProps {
 }
 
 export function WorkspaceView({
-  myKeys,
-  contacts,
-  crxKeys,
-  getKeyHandle,
-  onUnlockWithPassword,
-  onUnlockWithPasskey,
   pendingAction,
   onClearPending,
   vaultSettling = false,
   awaitingPendingOp = false,
   onOpenReply,
-  encryptToKeyId,
-  onClearEncryptTo,
-  onNavigateToKeys,
-  onRevealKey,
-  onLookupSigner,
-  onOperationComplete,
   restoreDraft,
   onDraftRestored,
   onRegisterDraftSource,
@@ -198,6 +170,35 @@ export function WorkspaceView({
   onIntakeConsumed,
   onPaletteOps,
 }: WorkspaceViewProps) {
+  const { keys: myKeys } = useKeyring();
+  const { contacts } = useContacts();
+  const { keys: crxKeys } = useCrxKeys();
+  const { session } = useVault();
+  const appNav = useNav();
+  const { keyDiscoveryEnabled } = usePreferences();
+  const { openImport, showTab, revealKeys, consume } = appNav;
+  const onClearEncryptTo = useCallback(
+    () => consume("encryptToKeyId"),
+    [consume],
+  );
+  const onNavigateToKeys = useCallback(
+    (prefill?: string) => (prefill ? openImport({ prefill }) : showTab("keys")),
+    [openImport, showTab],
+  );
+  const onRevealKey = useCallback(
+    (keyId: string) => revealKeys([keyId]),
+    [revealKeys],
+  );
+  const lookupSignerKey = useCallback(
+    (keyId: string) => openImport({ lookup: keyId }),
+    [openImport],
+  );
+  const getKeyHandle = session.getKeyHandle;
+  const onUnlockWithPassword = session.unlockWithPassword;
+  const onUnlockWithPasskey = session.unlockWithPasskey;
+  const encryptToKeyId = appNav.encryptToKeyId;
+  const onLookupSigner = keyDiscoveryEnabled ? lookupSignerKey : undefined;
+  const onOperationComplete = session.lockAllIfNoCache;
   const {
     crxSigningEnabled,
     autoDownloadFiles,
@@ -434,7 +435,7 @@ export function WorkspaceView({
     clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopied(false), 2000);
   };
-  const canCrxSign = !!crxSigningEnabled && (crxKeys?.length ?? 0) > 0;
+  const canCrxSign = !!crxSigningEnabled && crxKeys.length > 0;
   const singleCrxFile = s.files.length === 1 && /\.crx$/i.test(s.files[0].name);
   // CRX signs a packed extension: offer it only for a single .zip that
   // actually contains a manifest.json (verified async in state), never for
@@ -1123,13 +1124,13 @@ export function WorkspaceView({
   const remedyAction = s.error?.remedy?.action;
   const remedyHandled =
     remedyAction === "retry" ||
-    (remedyAction === "import-key" && !!onNavigateToKeys) ||
+    remedyAction === "import-key" ||
     (remedyAction === "unlock" && s.needsPassword);
   const handleRemedy = remedyHandled
     ? (action: RemedyAction) => {
         switch (action) {
           case "import-key":
-            onNavigateToKeys?.();
+            onNavigateToKeys();
             break;
           case "retry":
             void ops.execute();
@@ -1205,7 +1206,7 @@ export function WorkspaceView({
           getTranslation={s.getTranslation}
           outputPublicKeyDetected={s.outputPublicKeyDetected}
           outputVersion={s.outputVersion}
-          onImportKey={(armored) => onNavigateToKeys?.(armored)}
+          onImportKey={onNavigateToKeys}
           onRevealKey={onRevealKey}
           onLookupSigner={lookupSigner}
           fullHeight
@@ -1286,7 +1287,7 @@ export function WorkspaceView({
       myKeys={myKeys}
       outputPublicKeyDetected={s.outputPublicKeyDetected}
       outputVersion={s.outputVersion}
-      onImportKey={(armored) => onNavigateToKeys?.(armored)}
+      onImportKey={onNavigateToKeys}
       onRevealKey={onRevealKey}
       onLookupSigner={lookupSigner}
     />
@@ -1517,7 +1518,7 @@ export function WorkspaceView({
         )}
 
         {/* Signing an extension package: pick a CRX key, not a PGP key. */}
-        {showCrxSign && crxKeys && crxKeys.length > 0 && (
+        {showCrxSign && crxKeys.length > 0 && (
           <div>
             <label className="text-muted-foreground mb-1 block text-xs font-medium">
               {t("workspace_sign_with")}
@@ -1633,15 +1634,13 @@ export function WorkspaceView({
                 {encryptEngine === "ssh"
                   ? t("workspace_self_excluded_age")
                   : t("workspace_self_excluded_pgp")}{" "}
-                {onNavigateToKeys && (
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToKeys()}
-                    className="text-primary underline"
-                  >
-                    {t("workspace_import_one")}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => onNavigateToKeys()}
+                  className="text-primary underline"
+                >
+                  {t("workspace_import_one")}
+                </button>
               </p>
             )}
           </div>
