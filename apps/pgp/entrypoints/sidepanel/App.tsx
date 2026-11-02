@@ -4,7 +4,6 @@ import { HistoryIcon, SettingsIcon } from "lucide-react";
 import { Button } from "@amibeingpwned/ui/button";
 
 import type { WorkspaceIntake } from "../../components/workspace/useWorkspace";
-import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
 import type { Tab } from "../../hooks/useNav";
 import type { VaultServices } from "../../hooks/useVault";
 import type { DropRule } from "../../lib/drop-routing";
@@ -22,7 +21,11 @@ import { SettingsView } from "../../components/shared/SettingsView";
 import { VaultProblemScreen } from "../../components/shared/VaultProblemScreen";
 import { HistoryPage } from "../../components/workspace/HistoryPage";
 import { WorkspaceView } from "../../components/workspace/WorkspaceView";
-import { useActionContext } from "../../hooks/useActionContext";
+import {
+  useActionContext,
+  useWorkspaceBridgeStore,
+  WorkspaceBridgeContext,
+} from "../../hooks/useActionContext";
 import { useContacts } from "../../hooks/useContacts";
 import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useKeyring } from "../../hooks/useKeyring";
@@ -423,12 +426,10 @@ export default function App() {
     return () => clearTimeout(t);
   }, [masterUnlocked, activeTab]);
 
-  // ── Command palette / action registry wiring ─────────────────────
-  // WorkspaceView pushes its palette-facing state/ops slice up here;
-  // useActionContext folds it with tab + navigation callbacks into the
-  // ActionCtx the registry evaluates against.
-  const [workspaceBridge, setWorkspaceBridge] =
-    useState<WorkspaceOpsBridge | null>(null);
+  // ── Command palette ──────────────────────────────────────────────
+  // The workspace publishes to this store and only the palette listens,
+  // so a workspace change never re-renders the App.
+  const workspaceBridge = useWorkspaceBridgeStore();
 
   const lockNow = useCallback(() => void doMasterLock(), [doMasterLock]);
 
@@ -439,22 +440,6 @@ export default function App() {
     openPaletteRef.current = fn;
   }, []);
   const openPalette = useCallback(() => openPaletteRef.current?.(), []);
-
-  const actionCtx = useActionContext({
-    tab: activeTab,
-    setTab: nav.showTab,
-    workspace: workspaceBridge,
-    counts: {
-      ownKeys: keyring.keys.length,
-      contacts: contacts.contacts.length,
-    },
-    neverCacheKeys,
-    openHistory: nav.openHistory,
-    openGenerate: () => nav.openKeysRoute("generate"),
-    openImport: () => nav.openKeysRoute("import"),
-    openSecurityPresets: nav.openPresets,
-    lockNow,
-  });
 
   // Persist (or clear, with null) the default-key choice.
   const handleSetDefaultKey = useCallback((keyId: string | null) => {
@@ -712,127 +697,151 @@ export default function App() {
   return (
     <VaultContext value={vaultServices}>
       <NavContext value={nav}>
-        <GlobalDropZone rules={dropRules}>
-          <div className="flex h-screen flex-col">
-            <TabBar
-              activeTab={activeTab}
-              onTabChange={nav.showTab}
-              trailing={
-                // Never-cache means no history, so no viewer either.
-                activeTab === "workspace" && !neverCacheKeys ? (
-                  <button
-                    type="button"
-                    onClick={nav.openHistory}
-                    title={t("actions_history")}
-                    aria-label={t("actions_history")}
-                    // Out of the Tab order; keyboard users have the palette.
-                    tabIndex={-1}
-                    className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-[30px] items-center justify-center rounded-md transition-colors"
-                  >
-                    <HistoryIcon className="h-4 w-4" />
-                  </button>
-                ) : undefined
-              }
-            />
-
-            {/* A sealed store came back older than this device last saw
-                it, or went missing (lib/storage/integrity.ts). */}
-            <IntegrityBanner
-              syncVault={storageLocation === "sync"}
-              // Settings sat at the strictest preset until acknowledged.
-              onAcknowledged={() => void preferencesStore.reload()}
-            />
-
-            <CommandPalette ctx={actionCtx} bindOpen={bindPaletteOpen} />
-
-            {/* Opens over the current tab: no tab switch to flash past. */}
-            {nav.importing && (
-              <ImportKeyPage
-                onClose={nav.closeImport}
-                onImportPrivate={handleAddKey}
-                onImportPublic={contacts.add}
-                onRemoveContact={contacts.remove}
-                existingKeys={keyring.keys}
-                existingContacts={contacts.contacts}
-                reusePasskeyCredentialId={
-                  vaultServices.masterPasskeyCredentialId
+        <WorkspaceBridgeContext value={workspaceBridge}>
+          <GlobalDropZone rules={dropRules}>
+            <div className="flex h-screen flex-col">
+              <TabBar
+                activeTab={activeTab}
+                onTabChange={nav.showTab}
+                trailing={
+                  // Never-cache means no history, so no viewer either.
+                  activeTab === "workspace" && !neverCacheKeys ? (
+                    <button
+                      type="button"
+                      onClick={nav.openHistory}
+                      title={t("actions_history")}
+                      aria-label={t("actions_history")}
+                      // Out of the Tab order; keyboard users have the palette.
+                      tabIndex={-1}
+                      className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-[30px] items-center justify-center rounded-md transition-colors"
+                    >
+                      <HistoryIcon className="h-4 w-4" />
+                    </button>
+                  ) : undefined
                 }
-                masterSealSalt={masterSealSalt}
-                initialArmored={nav.importing.prefill}
-                initialLookup={nav.importing.lookup}
-                keyDiscoveryEnabled={keyDiscoveryEnabled}
-                crxSigningEnabled={crxSigningEnabled}
-                onImportCrx={crxKeys.add}
-                onImported={(keyIds, opts) => {
-                  if (keyIds.length === 0) return;
-                  if (opts?.reveal) {
-                    nav.revealKeys(keyIds);
-                    return;
-                  }
-                  // An import never moves the user: on the Keys tab the
-                  // card pulses, elsewhere a toast offers the trip.
-                  if (activeTab === "keys") {
-                    nav.highlightKeys(keyIds);
-                    return;
-                  }
-                  toast.success(tn("app_import_added", keyIds.length), {
-                    id: "import-added",
-                    action: {
-                      label: tn("app_import_view_key", keyIds.length),
-                      onClick: () => nav.revealKeys(keyIds),
-                    },
-                  });
+              />
+
+              {/* A sealed store came back older than this device last saw
+                it, or went missing (lib/storage/integrity.ts). */}
+              <IntegrityBanner
+                syncVault={storageLocation === "sync"}
+                // Settings sat at the strictest preset until acknowledged.
+                onAcknowledged={() => void preferencesStore.reload()}
+              />
+
+              <Palette
+                tab={activeTab}
+                counts={{
+                  ownKeys: keyring.keys.length,
+                  contacts: contacts.contacts.length,
                 }}
+                neverCacheKeys={neverCacheKeys}
+                nav={nav}
+                lockNow={lockNow}
+                bindOpen={bindPaletteOpen}
               />
-            )}
-            {nav.historyOpen && (
-              <HistoryPage
-                enabled={prefs.historyEnabled}
-                onClose={nav.closeHistory}
-              />
-            )}
 
-            <main
-              className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
-              role="tabpanel"
-              id={`tabpanel-${activeTab}`}
-              aria-labelledby={`tab-${activeTab}`}
-            >
-              <div className={activeTab === "workspace" ? "h-full" : "hidden"}>
-                <WorkspaceView
-                  vaultSettling={
-                    phase.opening || keyring.loading || contacts.loading
+              {/* Opens over the current tab: no tab switch to flash past. */}
+              {nav.importing && (
+                <ImportKeyPage
+                  onClose={nav.closeImport}
+                  onImportPrivate={handleAddKey}
+                  onImportPublic={contacts.add}
+                  onRemoveContact={contacts.remove}
+                  existingKeys={keyring.keys}
+                  existingContacts={contacts.contacts}
+                  reusePasskeyCredentialId={
+                    vaultServices.masterPasskeyCredentialId
                   }
-                  awaitingPendingOp={!pendingChecked}
-                  onOpenReply={openReader}
-                  pendingAction={
-                    pending &&
-                    (pending.action === "encrypt" ||
-                      pending.action === "decrypt" ||
-                      pending.action === "sign" ||
-                      pending.action === "verify")
-                      ? { action: pending.action, text: pending.text }
-                      : null
-                  }
-                  onClearPending={clearPending}
-                  restoreDraft={draftCiphertext}
-                  onDraftRestored={handleDraftRestored}
-                  onRegisterDraftSource={registerDraftSource}
-                  intake={workspaceIntake}
-                  onIntakeConsumed={clearWorkspaceIntake}
-                  onPaletteOps={setWorkspaceBridge}
+                  masterSealSalt={masterSealSalt}
+                  initialArmored={nav.importing.prefill}
+                  initialLookup={nav.importing.lookup}
+                  keyDiscoveryEnabled={keyDiscoveryEnabled}
+                  crxSigningEnabled={crxSigningEnabled}
+                  onImportCrx={crxKeys.add}
+                  onImported={(keyIds, opts) => {
+                    if (keyIds.length === 0) return;
+                    if (opts?.reveal) {
+                      nav.revealKeys(keyIds);
+                      return;
+                    }
+                    // An import never moves the user: on the Keys tab the
+                    // card pulses, elsewhere a toast offers the trip.
+                    if (activeTab === "keys") {
+                      nav.highlightKeys(keyIds);
+                      return;
+                    }
+                    toast.success(tn("app_import_added", keyIds.length), {
+                      id: "import-added",
+                      action: {
+                        label: tn("app_import_view_key", keyIds.length),
+                        onClick: () => nav.revealKeys(keyIds),
+                      },
+                    });
+                  }}
                 />
-              </div>
-              {activeTab === "keys" && <KeysView />}
-              {activeTab === "settings" && <SettingsView />}
-            </main>
+              )}
+              {nav.historyOpen && (
+                <HistoryPage
+                  enabled={prefs.historyEnabled}
+                  onClose={nav.closeHistory}
+                />
+              )}
 
-            <AppFooter onOpenPalette={openPalette} />
-          </div>
-        </GlobalDropZone>
+              <main
+                className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
+                role="tabpanel"
+                id={`tabpanel-${activeTab}`}
+                aria-labelledby={`tab-${activeTab}`}
+              >
+                <div
+                  className={activeTab === "workspace" ? "h-full" : "hidden"}
+                >
+                  <WorkspaceView
+                    vaultSettling={
+                      phase.opening || keyring.loading || contacts.loading
+                    }
+                    awaitingPendingOp={!pendingChecked}
+                    onOpenReply={openReader}
+                    pendingAction={
+                      pending &&
+                      (pending.action === "encrypt" ||
+                        pending.action === "decrypt" ||
+                        pending.action === "sign" ||
+                        pending.action === "verify")
+                        ? { action: pending.action, text: pending.text }
+                        : null
+                    }
+                    onClearPending={clearPending}
+                    restoreDraft={draftCiphertext}
+                    onDraftRestored={handleDraftRestored}
+                    onRegisterDraftSource={registerDraftSource}
+                    intake={workspaceIntake}
+                    onIntakeConsumed={clearWorkspaceIntake}
+                  />
+                </div>
+                {activeTab === "keys" && <KeysView />}
+                {activeTab === "settings" && <SettingsView />}
+              </main>
+
+              <AppFooter onOpenPalette={openPalette} />
+            </div>
+          </GlobalDropZone>
+        </WorkspaceBridgeContext>
       </NavContext>
     </VaultContext>
   );
+}
+
+/** The palette over the live action context. Subscribes to the workspace
+ *  bridge itself, so workspace changes re-render this, not the App. */
+function Palette({
+  bindOpen,
+  ...args
+}: Parameters<typeof useActionContext>[0] & {
+  bindOpen: (open: () => void) => void;
+}) {
+  return <CommandPalette ctx={useActionContext(args)} bindOpen={bindOpen} />;
 }
 
 // ── Tab bar with WAI-ARIA keyboard navigation ────────────────────────

@@ -1,4 +1,5 @@
 import {
+  use,
   useCallback,
   useEffect,
   useEffectEvent,
@@ -27,7 +28,10 @@ import {
 } from "@amibeingpwned/ui/select";
 import { Switch } from "@amibeingpwned/ui/switch";
 
-import type { WorkspaceOpsBridge } from "../../hooks/useActionContext";
+import type {
+  WorkspaceCommands,
+  WorkspaceSnapshot,
+} from "../../hooks/useActionContext";
 import type { RemedyAction } from "../../lib/errors/present";
 import type { WorkspaceAction } from "../../lib/messages";
 import type { ReaderSigner } from "../../lib/reader-protocol";
@@ -35,6 +39,7 @@ import type { WorkspaceDraftSource } from "../../lib/workspace-draft";
 import type { WorkspaceIntake } from "./useWorkspace";
 import type { Mode } from "./workspace-state";
 import type { ComposeTools } from "./WorkspaceInput";
+import { WorkspaceBridgeContext } from "../../hooks/useActionContext";
 import { useComposeTranslation } from "../../hooks/useComposeTranslation";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
@@ -100,7 +105,6 @@ interface WorkspaceViewProps {
   onRegisterDraftSource?: (src: WorkspaceDraftSource | null) => void;
   intake?: WorkspaceIntake | null;
   onIntakeConsumed?: () => void;
-  onPaletteOps?: (bridge: WorkspaceOpsBridge | null) => void;
 }
 
 export function WorkspaceView({
@@ -114,7 +118,6 @@ export function WorkspaceView({
   onRegisterDraftSource,
   intake,
   onIntakeConsumed,
-  onPaletteOps,
 }: WorkspaceViewProps) {
   const ws = useWorkspace({
     pendingAction,
@@ -558,8 +561,9 @@ export function WorkspaceView({
     recheckSigner();
   }, [contacts]);
 
-  // ── palette bridge ─────────────────────────────────────────────────
-  const commands = {
+  // ── palette ────────────────────────────────────────────────────────
+  const bridge = use(WorkspaceBridgeContext);
+  const commands: WorkspaceCommands = {
     setMode,
     execute: () => {
       if (canRun) runMain();
@@ -580,70 +584,29 @@ export function WorkspaceView({
         void translation.translate();
       }
     },
-    applyStyle: (style: Parameters<ComposeTools["applyStyle"]>[0]) =>
-      composeToolsRef.current?.applyStyle(style),
+    applyStyle: (style) => composeToolsRef.current?.applyStyle(style),
     openFind: () => composeToolsRef.current?.openFind(),
-    translateTo: (language: string) =>
-      void composeTranslation.translate(language),
+    translateTo: (language) => void composeTranslation.translate(language),
     toggleEncryptToSelf: () => setEncryptToSelf(!encryptToSelf),
     toggleAlsoSign: () => setAlsoSign(!alsoSign),
     toggleSaveToHistory: () => setSaveToHistory(!saveToHistory),
   };
-  const commandsRef = useRef(commands);
-  useEffect(() => {
-    commandsRef.current = commands;
-  });
-  useEffect(() => {
-    const c = commandsRef;
-    onPaletteOps?.({
-      mode: s.mode,
-      hasInput,
-      canEncrypt,
-      encryptEngine,
-      hasOutput: resultHasOutput,
-      hasDownload,
-      historyEnabled: saveToHistory,
-      encryptToSelf,
-      alsoSign,
-      resultCanTranslate,
-      resultCanReply: canReply,
-      readingLanguage: translationTargetLanguage,
-      composeCanEdit,
-      translateEnabled,
-      translateTarget: composeTranslation.targetLanguage,
-      setMode: (m) => c.current.setMode(m),
-      execute: () => c.current.execute(),
-      clearInput: () => c.current.clearInput(),
-      copyOutput: () => c.current.copyOutput(),
-      downloadOutput: () => c.current.downloadOutput(),
-      reply: () => c.current.reply(),
-      translateOutput: () => c.current.translateOutput(),
-      applyStyle: (style) => c.current.applyStyle(style),
-      openFind: () => c.current.openFind(),
-      translateTo: (language) => c.current.translateTo(language),
-      toggleEncryptToSelf: () => c.current.toggleEncryptToSelf(),
-      toggleAlsoSign: () => c.current.toggleAlsoSign(),
-      toggleSaveToHistory: () => c.current.toggleSaveToHistory(),
-    });
-  }, [
-    onPaletteOps,
-    s.mode,
+  const snapshot: WorkspaceSnapshot = {
+    mode: s.mode,
     hasInput,
     canEncrypt,
     encryptEngine,
-    resultHasOutput,
+    hasOutput: resultHasOutput,
     hasDownload,
-    saveToHistory,
-    encryptToSelf,
-    alsoSign,
     resultCanTranslate,
-    canReply,
-    translationTargetLanguage,
+    resultCanReply: canReply,
     composeCanEdit,
     translateEnabled,
-    composeTranslation.targetLanguage,
-  ]);
-  useEffect(() => () => onPaletteOps?.(null), [onPaletteOps]);
+    translateTarget: composeTranslation.targetLanguage,
+  };
+  // Every commit; the bridge tells the palette only when the snapshot moved.
+  useEffect(() => bridge?.publish(snapshot, commands));
+  useEffect(() => () => bridge?.publish(null, null), [bridge]);
 
   // Remedies this view can perform; any other renders message-only.
   const passwordInputRef = useRef<HTMLInputElement>(null);

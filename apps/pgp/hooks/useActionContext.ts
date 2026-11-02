@@ -1,114 +1,150 @@
-import { useEffect, useMemo, useRef } from "react";
+import {
+  createContext,
+  use,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import type { ActionCtx, AppTab, PgpMode } from "../lib/actions/types";
 import type { InlineStyle } from "../lib/compose/text-format";
 import type { StoredKeyKind } from "../lib/storage/key-kind";
+import type { Nav } from "./useNav";
+import { usePreferences } from "./usePreferences";
 
-/**
- * The slice of workspace state + operations the action system needs,
- * pushed up by WorkspaceView on change. Null until the workspace has
- * mounted (it stays mounted-but-hidden across tabs, so in practice
- * this is only null for a frame).
- */
-export interface WorkspaceOpsBridge {
+/** What the workspace shows the action system. Plain values only: no
+ *  plaintext, nothing a lock needs to wipe. See ActionCtx for each. */
+export interface WorkspaceSnapshot {
   mode: PgpMode;
   hasInput: boolean;
-  /** Encrypt has someone who could open the result: a selected
-   *  recipient, or an armed message password. See ActionCtx.canEncrypt
-   *  for why this is not named after recipients. */
   canEncrypt: boolean;
-  /** Which engine those recipients encrypt with (null when none are
-   *  selected). See ActionCtx.encryptEngine. */
   encryptEngine: StoredKeyKind | null;
   hasOutput: boolean;
-  /** A completed operation produced anything downloadable. */
   hasDownload: boolean;
-  historyEnabled: boolean;
-  /** The "Also encrypt to me" preference is on. */
-  encryptToSelf: boolean;
-  /** The "Sign when encrypting" preference is on. */
-  alsoSign: boolean;
+  resultCanTranslate: boolean;
+  resultCanReply: boolean;
+  composeCanEdit: boolean;
+  translateEnabled: boolean;
+  translateTarget: string | null;
+}
+
+/** What the workspace can be asked to do, run against its latest render. */
+export interface WorkspaceCommands {
   setMode: (mode: PgpMode) => void;
   execute: () => void;
   clearInput: () => void;
   copyOutput: () => void;
   downloadOutput: () => void;
-  /** The workspace checkboxes' exact toggle handlers (persistence and
-   *  stale-output reset included), exposed for the palette toggles. */
   toggleEncryptToSelf: () => void;
   toggleAlsoSign: () => void;
   toggleSaveToHistory: () => void;
-  /** See ActionCtx.result. */
-  resultCanTranslate: boolean;
-  readingLanguage: string;
   translateOutput: () => void;
-  resultCanReply: boolean;
   reply: () => void;
-  /** See ActionCtx.compose. */
-  composeCanEdit: boolean;
-  translateEnabled: boolean;
-  translateTarget: string | null;
   applyStyle: (style: InlineStyle) => void;
   openFind: () => void;
   translateTo: (language: string) => void;
 }
 
+/**
+ * The workspace's link to the palette: an external store, so a workspace
+ * change re-renders the palette and not the App around it. Listeners hear
+ * only snapshot changes; commands are replaced silently each commit and
+ * looked up at call time.
+ */
+export interface WorkspaceBridge {
+  publish: (
+    snapshot: WorkspaceSnapshot | null,
+    commands: WorkspaceCommands | null,
+  ) => void;
+  snapshot: () => WorkspaceSnapshot | null;
+  commands: () => WorkspaceCommands | null;
+  subscribe: (listener: () => void) => () => void;
+}
+
+function sameSnapshot(
+  a: WorkspaceSnapshot | null,
+  b: WorkspaceSnapshot | null,
+): boolean {
+  if (a === null || b === null) return a === b;
+  return (Object.keys(a) as (keyof WorkspaceSnapshot)[]).every(
+    (k) => a[k] === b[k],
+  );
+}
+
+export function createWorkspaceBridge(): WorkspaceBridge {
+  let snapshot: WorkspaceSnapshot | null = null;
+  let commands: WorkspaceCommands | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    publish(next, nextCommands) {
+      commands = nextCommands;
+      if (sameSnapshot(snapshot, next)) return;
+      snapshot = next;
+      for (const l of listeners) l();
+    },
+    snapshot: () => snapshot,
+    commands: () => commands,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
+export const WorkspaceBridgeContext = createContext<WorkspaceBridge | null>(
+  null,
+);
+
+/** The App's bridge, created once. */
+export function useWorkspaceBridgeStore(): WorkspaceBridge {
+  return useState(createWorkspaceBridge)[0];
+}
+
 interface UseActionContextArgs {
   tab: AppTab;
-  setTab: (tab: AppTab) => void;
-  workspace: WorkspaceOpsBridge | null;
   counts: { ownKeys: number; contacts: number };
-  /** The "Never auto-cache keys" setting (gates history availability). */
+  /** Gates history availability. */
   neverCacheKeys: boolean;
-  openHistory: () => void;
-  openGenerate: () => void;
-  openImport: () => void;
-  openSecurityPresets: () => void;
+  nav: Pick<Nav, "showTab" | "openHistory" | "openKeysRoute" | "openPresets">;
   lockNow: () => void;
 }
 
 const noop = () => undefined;
 
 /**
- * Assemble the ActionCtx the action registry evaluates against. Only
- * used behind the master-unlock gate, so `masterUnlocked` is always
- * true here. Memoized on the data fields; callbacks route through a
- * ref so the ctx identity only changes when something an action can
- * *read* changes.
+ * The ActionCtx the registry evaluates against. Only used behind the
+ * master-unlock gate, so `masterUnlocked` is always true. Its identity
+ * changes only when something an action can READ changes.
  */
-export function useActionContext(args: UseActionContextArgs): ActionCtx {
-  const argsRef = useRef(args);
-  useEffect(() => {
-    argsRef.current = args;
-  });
+export function useActionContext({
+  tab,
+  counts: { ownKeys, contacts },
+  neverCacheKeys,
+  nav: { showTab, openHistory, openKeysRoute, openPresets },
+  lockNow,
+}: UseActionContextArgs): ActionCtx {
+  const bridge = use(WorkspaceBridgeContext);
+  const ws = useSyncExternalStore(
+    bridge?.subscribe ?? subscribeNever,
+    bridge?.snapshot ?? nullSnapshot,
+  );
+  const {
+    historyEnabled,
+    encryptToSelf,
+    signWhenEncrypting: alsoSign,
+    translationTargetLanguage: readingLanguage,
+  } = usePreferences();
 
-  const { tab, workspace, counts, neverCacheKeys } = args;
-  const mode = workspace?.mode ?? "encrypt";
-  const hasInput = workspace?.hasInput ?? false;
-  const canEncrypt = workspace?.canEncrypt ?? false;
-  const encryptEngine = workspace?.encryptEngine ?? null;
-  const hasOutput = workspace?.hasOutput ?? false;
-  const hasDownload = workspace?.hasDownload ?? false;
-  const historyEnabled = workspace?.historyEnabled ?? false;
-  const encryptToSelf = workspace?.encryptToSelf ?? false;
-  const alsoSign = workspace?.alsoSign ?? false;
-  const resultCanTranslate = workspace?.resultCanTranslate ?? false;
-  const readingLanguage = workspace?.readingLanguage ?? "en";
-  const resultCanReply = workspace?.resultCanReply ?? false;
-  const composeCanEdit = workspace?.composeCanEdit ?? false;
-  const translateEnabled = workspace?.translateEnabled ?? false;
-  const translateTarget = workspace?.translateTarget ?? null;
-  const { ownKeys, contacts } = counts;
-
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const cmd = () => bridge?.commands() ?? null;
+    return {
       tab,
-      mode,
-      hasInput,
-      canEncrypt,
-      encryptEngine,
-      hasOutput,
-      hasDownload,
+      mode: ws?.mode ?? "encrypt",
+      hasInput: ws?.hasInput ?? false,
+      canEncrypt: ws?.canEncrypt ?? false,
+      encryptEngine: ws?.encryptEngine ?? null,
+      hasOutput: ws?.hasOutput ?? false,
+      hasDownload: ws?.hasDownload ?? false,
       masterUnlocked: true,
       historyEnabled,
       encryptToSelf,
@@ -116,66 +152,57 @@ export function useActionContext(args: UseActionContextArgs): ActionCtx {
       neverCacheKeys,
       counts: { ownKeys, contacts },
       result: {
-        canTranslate: resultCanTranslate,
+        canTranslate: ws?.resultCanTranslate ?? false,
         readingLanguage,
-        canReply: resultCanReply,
+        canReply: ws?.resultCanReply ?? false,
       },
       compose: {
-        canEdit: composeCanEdit,
-        translateEnabled,
-        translateTarget,
+        canEdit: ws?.composeCanEdit ?? false,
+        translateEnabled: ws?.translateEnabled ?? false,
+        translateTarget: ws?.translateTarget ?? null,
       },
       navigation: {
-        setTab: (t) => argsRef.current.setTab(t),
-        openHistory: () => argsRef.current.openHistory(),
-        openGenerate: () => argsRef.current.openGenerate(),
-        openImport: () => argsRef.current.openImport(),
-        setMode: (m) => (argsRef.current.workspace?.setMode ?? noop)(m),
-        openSecurityPresets: () => argsRef.current.openSecurityPresets(),
+        setTab: showTab,
+        openHistory,
+        openGenerate: () => openKeysRoute("generate"),
+        openImport: () => openKeysRoute("import"),
+        setMode: (m) => cmd()?.setMode(m),
+        openSecurityPresets: openPresets,
       },
       ops: {
-        execute: () => (argsRef.current.workspace?.execute ?? noop)(),
-        clearInput: () => (argsRef.current.workspace?.clearInput ?? noop)(),
-        copyOutput: () => (argsRef.current.workspace?.copyOutput ?? noop)(),
-        downloadOutput: () =>
-          (argsRef.current.workspace?.downloadOutput ?? noop)(),
-        lockNow: () => argsRef.current.lockNow(),
-        toggleEncryptToSelf: () =>
-          (argsRef.current.workspace?.toggleEncryptToSelf ?? noop)(),
-        toggleAlsoSign: () =>
-          (argsRef.current.workspace?.toggleAlsoSign ?? noop)(),
-        toggleSaveToHistory: () =>
-          (argsRef.current.workspace?.toggleSaveToHistory ?? noop)(),
-        applyStyle: (style) =>
-          (argsRef.current.workspace?.applyStyle ?? noop)(style),
-        openFind: () => (argsRef.current.workspace?.openFind ?? noop)(),
-        translateTo: (language) =>
-          (argsRef.current.workspace?.translateTo ?? noop)(language),
-        translateOutput: () =>
-          (argsRef.current.workspace?.translateOutput ?? noop)(),
-        reply: () => (argsRef.current.workspace?.reply ?? noop)(),
+        execute: () => cmd()?.execute(),
+        clearInput: () => cmd()?.clearInput(),
+        copyOutput: () => cmd()?.copyOutput(),
+        downloadOutput: () => cmd()?.downloadOutput(),
+        lockNow,
+        toggleEncryptToSelf: () => cmd()?.toggleEncryptToSelf(),
+        toggleAlsoSign: () => cmd()?.toggleAlsoSign(),
+        toggleSaveToHistory: () => cmd()?.toggleSaveToHistory(),
+        applyStyle: (style) => cmd()?.applyStyle(style),
+        openFind: () => cmd()?.openFind(),
+        translateTo: (language) => cmd()?.translateTo(language),
+        translateOutput: () => cmd()?.translateOutput(),
+        reply: () => cmd()?.reply(),
       },
-    }),
-    [
-      tab,
-      mode,
-      hasInput,
-      canEncrypt,
-      encryptEngine,
-      hasOutput,
-      hasDownload,
-      historyEnabled,
-      encryptToSelf,
-      alsoSign,
-      neverCacheKeys,
-      ownKeys,
-      contacts,
-      composeCanEdit,
-      translateEnabled,
-      translateTarget,
-      resultCanTranslate,
-      readingLanguage,
-      resultCanReply,
-    ],
-  );
+    };
+  }, [
+    bridge,
+    ws,
+    tab,
+    historyEnabled,
+    encryptToSelf,
+    alsoSign,
+    neverCacheKeys,
+    ownKeys,
+    contacts,
+    readingLanguage,
+    showTab,
+    openHistory,
+    openKeysRoute,
+    openPresets,
+    lockNow,
+  ]);
 }
+
+const subscribeNever = () => noop;
+const nullSnapshot = () => null;
