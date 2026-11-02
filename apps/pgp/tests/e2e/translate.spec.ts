@@ -1,0 +1,292 @@
+import type { Page } from "@playwright/test";
+
+import { aiCalls, removeBuiltInAi, stubBuiltInAi } from "./ai-stub";
+import { expect, test } from "./fixtures";
+import {
+  decryptInWorkspace,
+  encryptToSelfInWorkspace,
+  onboardWithPassword,
+} from "./helpers";
+
+const PASSWORD = "correct horse battery staple";
+const MESSAGE = "bonjour tout le monde, comment allez-vous aujourd hui";
+
+/**
+ * Translation against a STUBBED built-in AI.
+ *
+ * Headless Chrome ships no Gemini/translation model, so the real APIs are
+ * absent here -- which is itself worth a test (the first one below), but
+ * would leave the actual feature untested. The rest of the file installs
+ * a fake `Translator` / `LanguageDetector` in the panel realm before the
+ * app boots and drives the real UI against it.
+ *
+ * The load-bearing assertions are the "before the press" steps. Since
+ * translation now ships ENABLED and a missing model is installed on
+ * demand, the property that keeps that honest is no longer "we never
+ * download here" but "nothing happens until the button is pressed":
+ * enabled-and-untouched must read no plaintext and fetch nothing
+ * (T-AI-PLAINTEXT-DISCLOSURE, T-AI-TRANSLATE-METADATA). The unit tests in
+ * tests/unit/lib/ai/translate.test.ts pin the same split at the module boundary --
+ * `translateText`/`detectLanguage` never download, only the `ensure*`
+ * functions do -- while these cover the wiring, which is where the rule
+ * would realistically be lost.
+ */
+
+/** Flip the feature from its Settings page. Translation ships ON, so
+ *  most tests need no setup and this is mainly used to turn it OFF. */
+async function setTranslation(panel: Page, on: boolean): Promise<void> {
+  await panel.getByRole("tab", { name: "Settings" }).click();
+  await panel.getByRole("button", { name: "Translation" }).click();
+  // Named, not `.first()`: the settings list behind the slide-over has
+  // switches of its own that are still in the DOM.
+  const sw = panel.getByRole("switch", {
+    name: "Translate decrypted messages",
+  });
+  await expect(sw).toBeEnabled();
+  const want = on ? "true" : "false";
+  if ((await sw.getAttribute("aria-checked")) !== want) await sw.click();
+  await expect(sw).toHaveAttribute("aria-checked", want);
+  // Close the slide-over: while it is up it covers the tab bar and
+  // swallows clicks meant for the workspace.
+  await panel.getByRole("button", { name: "Back" }).click();
+  await expect(sw).toHaveCount(0);
+}
+
+/** Encrypt a message to self, then decrypt it, landing on the result
+ *  view where the Translate control lives. */
+async function decryptedMessageOnScreen(panel: Page): Promise<void> {
+  await panel.getByRole("tab", { name: "Main" }).click();
+  const armored = await encryptToSelfInWorkspace(panel, MESSAGE);
+  await decryptInWorkspace(panel, armored, MESSAGE);
+}
+
+test("the feature stays invisible where Chrome has no translation model", async ({
+  context,
+  panel,
+}) => {
+  await removeBuiltInAi(context);
+  await panel.reload();
+
+  await onboardWithPassword(panel, PASSWORD);
+  await panel.getByRole("tab", { name: "Settings" }).click();
+  await panel.getByRole("button", { name: "Translation" }).click();
+
+  await expect(
+    panel.getByText("not available here", { exact: false }),
+  ).toBeVisible();
+  // The toggle must not be flippable into a state that cannot work.
+  await expect(
+    panel.getByRole("switch", { name: "Translate decrypted messages" }),
+  ).toBeDisabled();
+});
+
+test("translates a decrypted message on demand", async ({ context, panel }) => {
+  await stubBuiltInAi(context, { availability: "available", detected: "fr" });
+  await panel.reload();
+
+  await onboardWithPassword(panel, PASSWORD);
+  await decryptedMessageOnScreen(panel);
+
+  await expect(
+    panel.getByRole("button", { name: /Translate to English/ }),
+  ).toBeVisible();
+
+  await test.step("no model has read the message before the click", async () => {
+    // The "intentional" rule, stated precisely. Settings legitimately
+    // probes `availability()` per language to render its pack list, and
+    // those calls take no text -- so the property is not "zero AI calls"
+    // but "nothing that READS the plaintext". Creating a session is the
+    // first thing that could, and detection counts: it is a model
+    // reading the message just as much as translation is.
+    const calls = await aiCalls(panel);
+    expect(
+      calls.filter((c) => !c.startsWith("translator.availability")),
+    ).toEqual([]);
+  });
+
+  await panel.getByRole("button", { name: /Translate to English/ }).click();
+
+  await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toBeVisible();
+  await expect(
+    panel.getByText(/Translated on this device from French/),
+  ).toBeVisible();
+
+  await test.step("both sessions are destroyed after use", async () => {
+    const calls = await aiCalls(panel);
+    expect(calls).toContain("detector.destroy");
+    expect(calls).toContain("translator.destroy");
+  });
+
+  await test.step("the same control toggles back to the original", async () => {
+    // The translation REPLACES the message, so getting back to it is the
+    // only way to check the model's version against what was actually
+    // sent. That path must not require re-translating.
+    await panel.getByRole("button", { name: "Show original" }).click();
+    await expect(panel.getByText(MESSAGE).first()).toBeVisible();
+    await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toHaveCount(0);
+    // Provenance follows what is on screen: claiming the original was
+    // "translated on this device" would be a lie about the text shown.
+    await expect(panel.getByText(/Translated on this device/)).toHaveCount(0);
+  });
+
+  await test.step("and back again without a second translation", async () => {
+    const before = (await aiCalls(panel)).filter((c) =>
+      c.startsWith("translator.create"),
+    ).length;
+    await panel
+      .getByRole("button", { name: /Show English translation/ })
+      .click();
+    await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toBeVisible();
+    const after = (await aiCalls(panel)).filter((c) =>
+      c.startsWith("translator.create"),
+    ).length;
+    expect(after).toBe(before);
+  });
+});
+
+test("the command palette offers one 'Translate to <reading language>' entry on a decrypted message", async ({
+  context,
+  panel,
+}) => {
+  await stubBuiltInAi(context, { availability: "available", detected: "fr" });
+  await panel.reload();
+  await onboardWithPassword(panel, PASSWORD);
+
+  await test.step("absent before there is a result", async () => {
+    await panel.keyboard.press("ControlOrMeta+k");
+    const palette = panel.getByRole("dialog", { name: "Command palette" });
+    await palette.getByPlaceholder("Type a command...").fill("translate");
+    await expect(palette.getByText(/^Translate to/)).toHaveCount(0);
+    await panel.keyboard.press("Escape");
+  });
+
+  await decryptedMessageOnScreen(panel);
+  await panel.keyboard.press("ControlOrMeta+k");
+  const palette = panel.getByRole("dialog", { name: "Command palette" });
+  await palette.getByPlaceholder("Type a command...").fill("translate");
+  // Exactly one, no language picker: the direction is fixed.
+  await expect(palette.getByText(/^Translate to/)).toHaveCount(1);
+  await palette.getByText("Translate to English").click();
+  await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toBeVisible();
+});
+
+test("installs a missing language pack on the press, then translates", async ({
+  context,
+  panel,
+}) => {
+  await stubBuiltInAi(context, {
+    availability: "downloadable",
+    detected: "fr",
+  });
+  await panel.reload();
+
+  await onboardWithPassword(panel, PASSWORD);
+  await decryptedMessageOnScreen(panel);
+
+  await test.step("nothing is fetched before the press", async () => {
+    // The boundary is the click, not the preference. Enabled-and-untouched
+    // must cause no download, which is what keeps the shipped-on default
+    // honest (T-AI-TRANSLATE-METADATA).
+    expect(
+      (await aiCalls(panel)).filter((c) => c.startsWith("translator.create")),
+    ).toEqual([]);
+  });
+
+  await panel.getByRole("button", { name: /Translate to English/ }).click();
+
+  // One press covers the download and the translation.
+  await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toBeVisible();
+  expect(
+    (await aiCalls(panel)).filter((c) => c.startsWith("translator.create")),
+  ).not.toEqual([]);
+});
+
+test("installs the language detector when the profile lacks it", async ({
+  context,
+  panel,
+}) => {
+  // A fresh Chrome profile is missing the DETECTOR too, not just the
+  // packs. Before this was handled the first press reported "not
+  // available on this device" on a perfectly capable machine, forever.
+  await stubBuiltInAi(context, {
+    availability: "available",
+    detected: "fr",
+    detectorAvailability: "downloadable",
+  });
+  await panel.reload();
+
+  await onboardWithPassword(panel, PASSWORD);
+  await decryptedMessageOnScreen(panel);
+  await panel.getByRole("button", { name: /Translate to English/ }).click();
+
+  await expect(panel.getByText(`TRANSLATED(${MESSAGE})`)).toBeVisible();
+  await expect(panel.getByText(/not available on this device/)).toHaveCount(0);
+});
+
+test("declines to guess when the detector is not confident", async ({
+  context,
+  panel,
+}) => {
+  await stubBuiltInAi(context, {
+    availability: "available",
+    detected: "fr",
+    confidence: 0.2,
+  });
+  await panel.reload();
+
+  await onboardWithPassword(panel, PASSWORD);
+  await decryptedMessageOnScreen(panel);
+  await panel.getByRole("button", { name: /Translate to English/ }).click();
+
+  await expect(
+    panel.getByText(/Not sure what language this message is in/),
+  ).toBeVisible();
+  expect(
+    (await aiCalls(panel)).filter((c) => c.startsWith("translator.create")),
+  ).toEqual([]);
+});
+
+test("says so instead of translating a message already in the target language", async ({
+  context,
+  panel,
+}) => {
+  await stubBuiltInAi(context, { availability: "available", detected: "en" });
+  await panel.reload();
+
+  await onboardWithPassword(panel, PASSWORD);
+  await decryptedMessageOnScreen(panel);
+  await panel.getByRole("button", { name: /Translate to English/ }).click();
+
+  await expect(
+    panel.getByText("This message is already in English."),
+  ).toBeVisible();
+  expect(
+    (await aiCalls(panel)).filter((c) => c.startsWith("translator.create")),
+  ).toEqual([]);
+});
+
+test("no translate control at all while the feature is off", async ({
+  context,
+  panel,
+}) => {
+  await stubBuiltInAi(context, { availability: "available", detected: "fr" });
+  await panel.reload();
+
+  await onboardWithPassword(panel, PASSWORD);
+  // Translation ships ON, so switching it off is now the deliberate act
+  // this test has to perform.
+  await setTranslation(panel, false);
+  await decryptedMessageOnScreen(panel);
+
+  await expect(panel.getByRole("button", { name: /Translate to/ })).toHaveCount(
+    0,
+  );
+  // Availability probes are excluded for the same reason as the test
+  // above: visiting Settings renders the pack list, which probes. They
+  // carry no text and fetch nothing.
+  expect(
+    (await aiCalls(panel)).filter(
+      (c) => !c.startsWith("translator.availability"),
+    ),
+  ).toEqual([]);
+});

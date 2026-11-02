@@ -110,51 +110,6 @@
   "app_onboarding_identity_body": {
     "message": "Créez une paire de clés pour chiffrer, déchiffrer et signer des messages."
   },
-  "app_onboarding_name_label": {
-    "message": "Nom *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "Votre nom complet"
-  },
-  "app_onboarding_email_label": {
-    "message": "Email"
-  },
-  "app_onboarding_optional": {
-    "message": "facultatif"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "vous@exemple.fr"
-  },
-  "app_onboarding_comment_label": {
-    "message": "Commentaire"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "ex. travail, personnel"
-  },
-  "app_onboarding_advanced_options": {
-    "message": "Options avancées"
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "Algorithme"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Moderne, rapide, clés compactes. Recommandé dans la plupart des cas."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Très compatible, mais plus lent, et son code RSA a un canal auxiliaire temporel connu (Marvin). Préférez ECC sauf si vous avez besoin de RSA."
-  },
-  "app_onboarding_expiry_label": {
-    "message": "Expiration de la clé"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "Jamais"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ an"
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ ans"
-  },
   "app_onboarding_create_key": {
     "message": "Créer ma clé PGP"
   },
@@ -262,9 +217,6 @@
   },
   "app_error_key_revoked": {
     "message": "Une clé impliquée dans cette opération a été révoquée par son propriétaire. Procurez-vous sa clé de remplacement, puis importez-la."
-  },
-  "app_error_weak_algorithm": {
-    "message": "Cette clé utilise un algorithme de signature qui n'est plus considéré comme sûr. Demandez à son propriétaire de la réémettre avec SHA-256 ou plus fort."
   },
   "app_error_corrupted": {
     "message": "Les données sont corrompues ou tronquées. Procurez-vous une copie complète et réessayez."

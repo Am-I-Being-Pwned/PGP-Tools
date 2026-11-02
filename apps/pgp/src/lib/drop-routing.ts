@@ -1,0 +1,122 @@
+/** Global-dropzone routing: ordered {@link DropRule}s, first match wins;
+ *  the last rule should be a catch-all. */
+
+import { splitSshPublicKeyCandidateLines } from "./armor-blocks";
+import { looksLikeBinaryKey, readKeyFile } from "./binary-armor";
+
+export interface DropPayload {
+  files: File[];
+  text: string;
+}
+
+export interface DropSample {
+  files: File[];
+  text: string;
+  sampleText: string;
+  hasBinaryKeyFile: boolean;
+}
+
+export interface DropRule {
+  id: string;
+  match: (sample: DropSample) => boolean;
+  run: (payload: DropPayload) => void | Promise<void>;
+}
+
+// Deliberately broad (OpenPGP private block or any PEM private key): a match
+// must be routed AWAY from the workspace and its at-rest draft, to import.
+// Anchored to "-----BEGIN " so a stray "PRIVATE KEY" in a body can't trip it.
+const PRIVATE_KEY_HEADER_RE =
+  /-----BEGIN (?:PGP PRIVATE KEY BLOCK|(?:[A-Z0-9]+ )*PRIVATE KEY)-----/;
+const PUBLIC_KEY_HEADER = "-----BEGIN PGP PUBLIC KEY BLOCK-----";
+
+export function looksLikePrivateKey(text: string): boolean {
+  return PRIVATE_KEY_HEADER_RE.test(text);
+}
+
+/** SSH public key line of ANY algorithm; the engine decides validity. */
+export function looksLikeSshPublicKey(text: string): boolean {
+  return splitSshPublicKeyCandidateLines(text).length > 0;
+}
+
+export function looksLikeKey(text: string): boolean {
+  // A signed/encrypted message is a message even if its text quotes a key.
+  const start = text.trimStart();
+  if (
+    start.startsWith("-----BEGIN PGP SIGNED MESSAGE-----") ||
+    start.startsWith("-----BEGIN PGP MESSAGE-----")
+  ) {
+    return false;
+  }
+  return (
+    PRIVATE_KEY_HEADER_RE.test(text) ||
+    text.includes(PUBLIC_KEY_HEADER) ||
+    looksLikeSshPublicKey(text)
+  );
+}
+
+// Memory bounds on classification and key-file reads.
+const SAMPLE_BYTES = 64 * 1024;
+const MAX_SAMPLE_FILES = 50;
+const MAX_KEY_FILE_BYTES = 1024 * 1024;
+
+export async function buildDropSample(
+  payload: DropPayload,
+): Promise<DropSample> {
+  const prefixes = await Promise.all(
+    payload.files.slice(0, MAX_SAMPLE_FILES).map(async (f) => {
+      try {
+        return new Uint8Array(await f.slice(0, SAMPLE_BYTES).arrayBuffer());
+      } catch {
+        return new Uint8Array(0);
+      }
+    }),
+  );
+  const decoder = new TextDecoder();
+  return {
+    files: payload.files,
+    text: payload.text,
+    sampleText: [payload.text, ...prefixes.map((b) => decoder.decode(b))].join(
+      "\n",
+    ),
+    hasBinaryKeyFile: prefixes.some(looksLikeBinaryKey),
+  };
+}
+
+/** Oversized files are skipped; binary keys come back armored. */
+export async function readAllFilesText(files: File[]): Promise<string> {
+  const texts = await Promise.all(
+    files.map((f) =>
+      f.size <= MAX_KEY_FILE_BYTES
+        ? readKeyFile(f).catch(() => "")
+        : Promise.resolve(""),
+    ),
+  );
+  return texts.join("\n");
+}
+
+export function resolveDropRule(
+  rules: DropRule[],
+  sample: DropSample,
+): DropRule | null {
+  return rules.find((r) => r.match(sample)) ?? null;
+}
+
+export function panelDropRules(to: {
+  importKey: (armored: string) => void;
+  workspace: (payload: DropPayload) => void;
+}): DropRule[] {
+  return [
+    {
+      id: "keys",
+      match: (s) => looksLikeKey(s.sampleText) || s.hasBinaryKeyFile,
+      run: async ({ files, text }) => {
+        // A benign text/plain riding along must not shadow a key file.
+        const armored = looksLikeKey(text)
+          ? text
+          : await readAllFilesText(files);
+        if (armored.trim()) to.importKey(armored);
+      },
+    },
+    { id: "workspace", match: () => true, run: to.workspace },
+  ];
+}

@@ -11,7 +11,7 @@ export default defineConfig(
       ".output/**",
       "gpg-wasm/pkg/**",
       "gpg-wasm/target/**",
-      "lib/i18n/messages.generated.ts",
+      "src/lib/i18n/messages.generated.ts",
     ],
   },
   baseConfig,
@@ -22,7 +22,7 @@ export default defineConfig(
       "turbo/no-undeclared-env-vars": [
         "error",
         // HEADED/CI only affect the Playwright e2e run, not the build.
-        // LOCALES only narrows the store-listing capture run (e2e-capture/).
+        // LOCALES only narrows the store-listing capture run (tests/capture/).
         {
           allowList: [
             "^DEV$",
@@ -61,10 +61,10 @@ export default defineConfig(
   {
     // Playwright E2E tests, not React. The fixture pattern names a
     // `use` argument that the React hooks rule mistakes for a hook.
-    // `e2e-capture/**` is the store-listing screenshot tooling: same
+    // `tests/capture/**` is the store-listing screenshot tooling: same
     // fixture pattern, same false positive, deliberately outside the e2e
     // config's testDir so CI never runs it as a test.
-    files: ["e2e/**", "e2e-capture/**"],
+    files: ["tests/e2e/**", "tests/capture/**"],
     rules: {
       "react-hooks/rules-of-hooks": "off",
     },

@@ -1,15 +1,21 @@
-//! Who signed this, is it still them, and what does an import change?
-//!
-//! Each test pins one way a "verified" verdict or a stored contact could
-//! say more than the cryptography does: unbound or lookalike User IDs, a
-//! backdated or partial signature, a forwarded message, an import that
-//! rolls a contact back or drops its revocation.
+//! Each test pins one way a "verified" verdict or stored contact could say
+//! more than the cryptography does.
 
 use super::*;
+
+use std::io::Write;
+use std::time::{Duration, SystemTime};
+
+use openpgp::cert::{CertBuilder, CipherSuite, SubkeyRevocationBuilder, UserIDRevocationBuilder};
+use openpgp::crypto::SessionKey;
 use openpgp::packet::signature::SignatureBuilder;
 use openpgp::packet::UserID;
-use openpgp::parse::{PacketParser, PacketParserResult};
-use openpgp::types::{ReasonForRevocation, SignatureType};
+use openpgp::parse::{PacketParser, PacketParserResult, Parse};
+use openpgp::serialize::stream::{Armorer, Encryptor, LiteralWriter, Message, Signer};
+use openpgp::serialize::Serialize as _;
+use openpgp::serialize::SerializeInto as _;
+use openpgp::types::{ReasonForRevocation, SignatureType, SymmetricAlgorithm};
+use zeroize::Zeroizing;
 
 const DAY: Duration = Duration::from_secs(86_400);
 
@@ -78,9 +84,7 @@ fn revoke(cert: &openpgp::Cert, reason: ReasonForRevocation) -> openpgp::Cert {
 
 #[test]
 fn an_unbound_user_id_is_never_the_contact_name() {
-    // Anyone can append a User ID packet to Bob's real cert. With no
-    // self-signature it is not Bob's claim, and it must not name him --
-    // "Aaron CEO" sorts first and would otherwise head every signer card.
+    // An unbound User ID is not Bob's claim and must not name him.
     let bob = aged_cert("Bob", DAY);
     let (forged, _) = bob
         .clone()
@@ -124,8 +128,7 @@ fn a_lookalike_user_id_is_flagged() {
     let info = key_info(&public(&fake));
     assert!(info["securityWarning"].as_str().unwrap().contains("different alphabets"));
 
-    // Judged per word: a Cyrillic or Greek name with a Latin address is
-    // ordinary, and must not be flagged.
+    // Judged per word: a Cyrillic name with a Latin address is ordinary.
     for honest in [
         "Alice",
         "Иван Петров <ivan@example.ru>",
@@ -135,8 +138,6 @@ fn a_lookalike_user_id_is_flagged() {
     ] {
         assert!(!mixes_scripts(honest), "{honest} flagged");
     }
-    // Letters that pass for Latin ones: fullwidth, IPA, Cherokee, small
-    // capitals, math bold, the Kelvin sign, Lisu.
     for fake in [
         "\u{ff21}lice",
         "\u{0251}lice",
@@ -146,12 +147,10 @@ fn a_lookalike_user_id_is_flagged() {
         "\u{1d400}lice",
         "\u{212a}evin",
         "\u{a4ee}lice",
-        // A domain label in another script next to a Latin one.
         "Tim <tim@\u{0430}\u{0440}\u{0440}\u{04cf}\u{0435}.com>",
     ] {
         assert!(mixes_scripts(fake), "{fake:?} missed");
     }
-    // ...while an all-Cyrillic address is a Cyrillic address.
     assert!(!mixes_scripts("Иван <иван@пример.рф>"));
 }
 
@@ -166,9 +165,7 @@ fn invisible_characters_are_stripped_from_user_ids() {
 
 #[test]
 fn a_signature_dated_before_its_key_existed_is_invalid_not_unknown() {
-    // Sequoia refuses the key at the claimed time (UnboundKey). We hold
-    // that key, so this is a forgery signal: amber "unknown signer" would
-    // show the forged text instead of hiding it.
+    // UnboundKey at the claimed time is a forgery signal, not "unknown signer".
     let bob = aged_cert("Bob", 10 * DAY);
     let signed = cleartext_at("Pay account 111.", &bob, SystemTime::now() - 400 * DAY);
     let forged = signed.replace("Pay account 111.", "Pay account 999.");
@@ -192,20 +189,17 @@ fn a_good_signature_reports_when_it_was_made_and_whether_the_key_is_still_curren
     let signed_at = v["signedAt"].as_f64().unwrap();
     assert!((signed_at - system_time_to_millis(at)).abs() < 1_000.0);
 
-    // Superseded since: the old signature still verifies (it was made
-    // while the key was good) -- but the UI must be told the key is gone.
+    // Superseded: still verifies, but the UI must be told the key is gone.
     let superseded = revoke(&bob, ReasonForRevocation::KeySuperseded);
     let v = verdict(&verify_message(&signed, &keys_json(&[&superseded]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     assert_eq!(v["signerKeyCurrent"], false);
 
-    // Compromised: every signature is suspect, whatever its date.
     let compromised = revoke(&bob, ReasonForRevocation::KeyCompromised);
     let v = verdict(&verify_message(&signed, &keys_json(&[&compromised]), None).unwrap());
     assert_eq!(v["signatureStatus"], "invalid");
 }
 
-/// An armored inline-signed message with one signature per cert.
 fn inline_multi(text: &str, signers: &[&openpgp::Cert]) -> String {
     let mut sink = Vec::new();
     {
@@ -223,8 +217,7 @@ fn inline_multi(text: &str, signers: &[&openpgp::Cert]) -> String {
 
 #[test]
 fn a_bad_signature_next_to_a_good_one_makes_the_message_invalid() {
-    // Mallory's key is revoked as compromised, so his signature fails --
-    // and a verdict naming only Alice would hide that failure.
+    // A verdict naming only Alice would hide Mallory's failed signature.
     let alice = aged_cert("Alice", 10 * DAY);
     let mallory = aged_cert("Mallory", 10 * DAY);
     let msg = inline_multi("pay 1000", &[&alice, &mallory]);
@@ -244,8 +237,7 @@ fn every_good_signer_and_every_unchecked_signature_is_reported() {
     let carol = aged_cert("Carol", 10 * DAY);
     let msg = inline_multi("joint statement", &[&alice, &bob, &carol]);
 
-    // Carol's key is not held: still valid, but the extra signature is
-    // counted rather than silently dropped.
+    // An unheld signer is counted, not silently dropped.
     let v = verdict(&verify_message(&msg, &keys_json(&[&alice, &bob]), None).unwrap());
     assert_eq!(v["signatureStatus"], "valid");
     let mut all: Vec<String> = vec![v["signerKeyId"].as_str().unwrap().into()];
@@ -275,8 +267,7 @@ fn a_cleartext_charset_header_must_name_a_charset() {
 
 // ── forwarding ───────────────────────────────────────────────────────
 
-/// What Bob sees inside a message once he has decrypted it: the signed
-/// packets, ready to be re-encrypted to someone else.
+/// The signed packets Bob sees after decrypting, ready to re-encrypt.
 fn signatures_inside(ct: &[u8], recipient: &openpgp::Cert) -> Vec<openpgp::packet::Signature> {
     let mut session: Option<(Option<SymmetricAlgorithm>, SessionKey)> = None;
     let mut sigs = Vec::new();
@@ -314,14 +305,12 @@ fn signed_mail_names_its_recipients_so_it_cannot_be_forwarded_as_addressed_to_an
     let named: Vec<_> = sigs[0].intended_recipients().map(|f| f.to_hex()).collect();
     assert_eq!(named, vec![bob.fingerprint().to_hex()]);
 
-    // Bob still reads it as valid.
     let h = insert_key(&bob).unwrap();
     let (sig, pt) = unpack(&decrypt_with_handle(&ct, h, Some(keys_json(&[&alice])), None).unwrap());
     drop_key(h).unwrap();
     assert_eq!(sig["signatureStatus"], "valid");
     assert_eq!(pt, b"hi bob");
 
-    // The same signature re-encrypted to Carol does not verify for her.
     let carol = aged_cert("Carol", DAY);
     let mut sink = Vec::new();
     {
@@ -355,7 +344,6 @@ fn mail_sent_to_a_key_before_it_expired_or_was_revoked_still_decrypts_for_its_ow
         .set_validity_period(DAY)
         .generate()
         .unwrap();
-    // Encrypted while the key was alive.
     let vc = cert.with_policy(policy(), now - 2 * DAY).unwrap();
     let rks: Vec<_> = vc.keys().for_transport_encryption().collect();
     let mut sink = Vec::new();
@@ -378,8 +366,8 @@ fn mail_sent_to_a_key_before_it_expired_or_was_revoked_still_decrypts_for_its_ow
 
 #[test]
 fn an_older_copy_cannot_undo_a_subkey_revocation() {
-    // Alice revoked a leaked encryption subkey. A pre-rotation copy of her
-    // cert, imported over the stored one, must not bring it back.
+    // A pre-rotation copy imported over the stored cert must not resurrect a
+    // revoked subkey.
     let alice = aged_cert("Alice", 10 * DAY);
     let before = public(&alice);
     let vc = alice.with_policy(policy(), None).unwrap();
@@ -429,7 +417,6 @@ fn a_bare_revocation_certificate_revokes_the_contact_it_names() {
 fn a_revocation_signed_by_someone_else_is_ignored() {
     let alice = aged_cert("Alice", DAY);
     let mallory = aged_cert("Mallory", DAY);
-    // Mallory signs a "revocation" of Alice's key with his own key.
     let forged = SignatureBuilder::new(SignatureType::KeyRevocation)
         .set_reason_for_revocation(ReasonForRevocation::KeyCompromised, b"")
         .unwrap()
@@ -446,8 +433,7 @@ fn a_revocation_signed_by_someone_else_is_ignored() {
 
     let merged = merge_public_key(&public(&alice), &armored).unwrap();
     assert_eq!(key_info(&merged)["revoked"], false);
-    // ...and leaves no trace: the forged signature is dropped, so the
-    // import reads as "nothing changed", not as an empty update.
+    // The forged signature is dropped: the import reads as "nothing changed".
     assert_eq!(merged, public(&alice));
 }
 
@@ -460,8 +446,7 @@ fn a_different_key_cannot_be_merged_into_a_contact() {
 
 #[test]
 fn third_party_certifications_are_stripped_on_import() {
-    // No web of trust here: other people's certifications only cost
-    // parse time, and a flooded cert carries tens of thousands.
+    // No web of trust: third-party certifications only cost parse time.
     let alice = aged_cert("Alice", DAY);
     let bob = aged_cert("Bob", DAY);
     let uid = alice.userids().next().unwrap().userid().clone();
@@ -474,7 +459,6 @@ fn third_party_certifications_are_stripped_on_import() {
     let parsed: Vec<serde_json::Value> = serde_json::from_str(&parse_keys(&public(&certified)).unwrap()).unwrap();
     let stored = openpgp::Cert::from_bytes(parsed[0]["armored"].as_str().unwrap().as_bytes()).unwrap();
     assert_eq!(stored.userids().next().unwrap().certifications().count(), 0);
-    // ...while the owner's own binding survives.
     assert_eq!(key_info(&public(&stored))["usableForEncryption"], true);
 
     let merged = merge_public_key(&public(&alice), &public(&certified)).unwrap();
@@ -489,7 +473,6 @@ fn flooding_with_third_party_revocations_or_an_appended_subkey_is_stripped() {
     let uid = alice.userids().next().unwrap().userid().clone();
     let mut bkp = primary_keypair(&bob);
 
-    // Bob "revokes his certification" of Alice's User ID, over and over.
     let mut flood: Vec<openpgp::Packet> = Vec::new();
     for _ in 0..20 {
         let sig = SignatureBuilder::new(SignatureType::CertificationRevocation)
@@ -497,8 +480,7 @@ fn flooding_with_third_party_revocations_or_an_appended_subkey_is_stripped() {
             .unwrap();
         flood.push(sig.into());
     }
-    // And an unbound subkey -- Bob's own primary, appended -- so its
-    // certifications would count as "own" if appended keys counted.
+    // An appended unbound subkey must not make its certifications count as "own".
     flood.push(openpgp::Packet::from(
         bob.primary_key().key().clone().role_into_subordinate(),
     ));
@@ -520,9 +502,7 @@ fn flooding_with_third_party_revocations_or_an_appended_subkey_is_stripped() {
 
 #[test]
 fn a_signature_names_who_it_was_signed_for() {
-    // Sequoia only enforces intended recipients when a message is opened
-    // with a key. Verify (and a password decrypt) has no "us" to check,
-    // so the list is handed to the UI to check against the user's keys.
+    // Verify has no "us" to check intended recipients against; the UI does it.
     let alice = aged_cert("Alice", DAY);
     let bob = aged_cert("Bob", DAY);
     let mut sink = Vec::new();
@@ -544,8 +524,7 @@ fn a_signature_names_who_it_was_signed_for() {
 
 #[test]
 fn stripping_a_key_flooded_with_forged_signatures_stays_fast() {
-    // A local key file has no size cap. Thousands of bad signatures used
-    // to make the strip quadratic (a list lookup per packet).
+    // Thousands of bad signatures used to make the strip quadratic.
     let alice = aged_cert("Alice", DAY);
     let mallory = aged_cert("Mallory", DAY);
     let mut mkp = primary_keypair(&mallory);
@@ -560,7 +539,6 @@ fn stripping_a_key_flooded_with_forged_signatures_stays_fast() {
         })
         .collect();
     let (flooded, _) = alice.clone().insert_packets(forged).unwrap();
-    // Signed by Mallory's key over Alice's: bad signatures, not certifications.
     let started = std::time::Instant::now();
     let stripped = strip_third_party(flooded).unwrap();
     assert!(started.elapsed() < Duration::from_secs(2), "{:?}", started.elapsed());
@@ -569,8 +547,8 @@ fn stripping_a_key_flooded_with_forged_signatures_stays_fast() {
 
 #[test]
 fn a_flood_of_lines_or_bytes_is_refused_before_the_framing_check_walks_it() {
-    // 200 MB of newlines inside a signed block aborted the wasm engine:
-    // the framing check kept an entry per line before any cap applied.
+    // 200 MB of newlines in a signed block once aborted the engine (per-line
+    // entries before any cap).
     let lines = format!(
         "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n{}x\n-----BEGIN PGP SIGNATURE-----\n\niQ==\n-----END PGP SIGNATURE-----\n",
         "\n".repeat(MAX_SIGNED_LINES + 1),
@@ -583,8 +561,7 @@ fn a_flood_of_lines_or_bytes_is_refused_before_the_framing_check_walks_it() {
 
 // ── a "message" that was never encrypted ─────────────────────────────
 
-/// An inline-signed message with no encryption layer, as `gpg --sign`
-/// writes it: what anyone can make of a public statement Alice signed.
+/// Inline-signed, no encryption layer, as `gpg --sign` writes it.
 fn signed_only(text: &[u8], signer: &openpgp::Cert, armor: bool) -> Vec<u8> {
     let mut sink = Vec::new();
     {
@@ -598,8 +575,7 @@ fn signed_only(text: &[u8], signer: &openpgp::Cert, armor: bool) -> Vec<u8> {
     sink
 }
 
-/// A bare literal packet, armored as a PGP MESSAGE: no signature and no
-/// encryption, yet it used to "decrypt".
+/// A bare literal packet armored as a PGP MESSAGE; it used to "decrypt".
 fn literal_only(text: &[u8]) -> Vec<u8> {
     let mut sink = Vec::new();
     {
@@ -623,10 +599,9 @@ fn a_message_with_no_encryption_layer_is_never_decrypted() {
         literal_only(b"Totally secret, only for you"),
     ] {
         let err = decrypt_with_handle(&msg, h, Some(keys.clone()), None).unwrap_err();
-        assert_eq!(err, NOT_ENCRYPTED);
-        // Not folded into "wrong password": nothing here takes one.
+        assert_eq!(err, not_encrypted());
         let err = decrypt_with_password(&msg, b"pw".to_vec(), Some(keys.clone()), None).unwrap_err();
-        assert_eq!(err, NOT_ENCRYPTED);
+        assert_eq!(err, not_encrypted());
         let shape: serde_json::Value =
             serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
         assert_eq!(shape["encrypted"], false);
@@ -669,8 +644,7 @@ fn an_unencrypted_message_opens_with_its_verdict_and_no_key() {
     assert_eq!(sig["signatureStatus"], "unsigned");
     assert_eq!(pt, b"plain");
 
-    // Cleartext-signed text reaching the decrypt tab opens the same way,
-    // under the same framing check Verify applies.
+    // Cleartext-signed text on the decrypt tab gets Verify's framing check.
     let csf = cleartext_sign("Line one\nLine two", &alice).unwrap();
     let (sig, pt) = unpack(&open_unencrypted(csf.as_bytes(), keys.clone(), None).unwrap());
     assert_eq!(sig["signatureStatus"], "valid");
@@ -686,19 +660,17 @@ fn opening_unencrypted_refuses_encrypted_input_and_text_around_the_block() {
     let ct = encrypt_impl(b"hi bob", &keys_json(&[&bob]), None, None).unwrap();
     assert!(open_unencrypted(&ct, keys.clone(), None).unwrap_err().contains("is encrypted"));
 
-    // Prose the signer never wrote, around (or in front of) the block.
     let signed = String::from_utf8(signed_only(b"ALICE GENUINE", &alice, true)).unwrap();
     for wrapped in [
         format!("Approved: wire 50k\n\n{signed}"),
         format!("{signed}\nSee also: acct 999\n"),
         format!("{}\n{signed}", String::from_utf8(literal_only(b"MALLORY FAKE")).unwrap()),
     ] {
-        assert_eq!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).unwrap_err(), OUTSIDE_SIGNED);
+        assert_eq!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).unwrap_err(), outside_signed());
     }
 }
 
-/// Re-armor `signed` with its literal body swapped for `body`, keeping
-/// the original signature packets.
+/// Re-armor `signed` with its literal body swapped, keeping the signatures.
 fn with_body(signed: &[u8], body: &[u8]) -> String {
     let pile = openpgp::PacketPile::from_bytes(signed).unwrap();
     let mut out = Vec::new();
@@ -720,12 +692,9 @@ fn with_body(signed: &[u8], body: &[u8]) -> String {
 
 #[test]
 fn a_text_signature_reads_a_lone_cr_as_a_line_break() {
-    // Pinned, not endorsed: Sequoia's text-mode hashing turns \r, \n and
-    // \r\n alike into CRLF, so a 0x01 signature over "Approved:\nNO" also
-    // covers "Approved:\rNO" -- which a browser renders as "Approved:NO".
-    // The UI marks any lone CR under a good signature (amber, with a
-    // note) and draws it visibly; if this test starts failing, Sequoia
-    // changed the canonicalisation and that caveat can be revisited.
+    // Pinned, not endorsed: text-mode hashing canonicalises \r, \n and \r\n to
+    // CRLF, so a lone CR is covered by the signature. The UI flags it amber; if
+    // this fails, Sequoia changed canonicalisation and that caveat can go.
     let alice = aged_cert("Alice", DAY);
     let mut sink = Vec::new();
     {
@@ -750,10 +719,9 @@ fn a_text_signature_reads_a_lone_cr_as_a_line_break() {
     assert_eq!(v["signatureStatus"], "valid");
     assert_eq!(v["text"], "Approved:\rNO");
 
-    // A cleartext-signed paste never gets that far: the framing check
-    // refuses a CR anywhere but before a LF.
+    // The cleartext framing check refuses a CR not before a LF.
     let csf = cleartext_sign("Approved:\nNO", &alice).unwrap().replace("Approved:\nNO", "Approved:\rNO");
-    assert_eq!(verify_message(&csf, &keys_json(&[&alice]), None).unwrap_err(), OUTSIDE_SIGNED);
+    assert_eq!(verify_message(&csf, &keys_json(&[&alice]), None).unwrap_err(), outside_signed());
 }
 
 #[test]
@@ -772,12 +740,9 @@ fn every_default_ignorable_and_format_character_is_stripped() {
     for c in hidden {
         assert_eq!(sanitize_untrusted(&format!("Al{c}ice"), 300), "Alice", "{c:?}");
     }
-    // A whole ASCII string smuggled in tag characters vanishes with them.
     let tags: String = "evil".chars().map(|c| char::from_u32(0xE0000 + c as u32).unwrap()).collect();
     assert_eq!(sanitize_untrusted(&format!("alice{tags}@example.com"), 300), "alice@example.com");
 
-    // Ordinary names in any script are left as they are, and the
-    // neighbours of each range survive.
     for name in [
         "José Müller <jose@example.com>",
         "Иван Петров",
@@ -794,9 +759,7 @@ fn every_default_ignorable_and_format_character_is_stripped() {
 
 #[test]
 fn blank_looking_symbols_are_stripped_from_names_and_addresses() {
-    // Not ignorable and not format characters, so neither property
-    // covers them -- but each draws as an empty cell, so
-    // `alice@corp.com` followed by one reads exactly like the address.
+    // Not ignorable/format chars, but each draws as an empty cell.
     for c in ['\u{2800}', '\u{fffc}', '\u{1d159}'] {
         assert_eq!(sanitize_untrusted(&format!("Al{c}ice"), 300), "Alice", "{c:?}");
         assert_eq!(
@@ -809,7 +772,6 @@ fn blank_looking_symbols_are_stripped_from_names_and_addresses() {
 
 // ── an unattended run's output ceiling ───────────────────────────────
 
-/// A reader that counts what is pulled from it, over an endless source.
 struct Counted<R> {
     inner: R,
     pulled: u64,
@@ -825,20 +787,17 @@ impl<R: std::io::Read> std::io::Read for Counted<R> {
 
 #[test]
 fn a_capped_read_stops_one_byte_past_the_cap() {
-    // An endless source: without the cap this read would never return.
     let mut src = Counted { inner: std::io::repeat(0x41), pulled: 0 };
     let err = read_within(&mut src, MAX_DECRYPTED_BYTES, Some(1024)).unwrap_err();
     assert_eq!(err, OUTPUT_CAP_REACHED);
     assert_eq!(src.pulled, 1025);
 
-    // At the cap exactly, it is a normal read.
     let out = read_within(&b"x".repeat(1024)[..], MAX_DECRYPTED_BYTES, Some(1024)).unwrap();
     assert_eq!(out.len(), 1024);
 
-    // A cap above the engine's own limit changes nothing: that limit,
-    // and its own error, still apply.
+    // A cap above the engine's own limit changes nothing.
     let err = read_within(&b"x".repeat(11)[..], 10, Some(1024)).unwrap_err();
-    assert_eq!(err, TOO_LARGE_TO_OPEN);
+    assert_eq!(err, too_large_to_open());
 }
 
 #[test]
@@ -854,19 +813,19 @@ fn every_unattended_entry_point_holds_back_a_message_over_the_cap() {
     assert_eq!(decrypt_with_handle(&ct, h, None, cap).unwrap_err(), OUTPUT_CAP_REACHED);
     let (_, pt) = unpack(&decrypt_with_handle(&ct, h, None, room).unwrap());
     assert_eq!(pt, big);
-    // A run the user started is not capped.
     let (_, pt) = unpack(&decrypt_with_handle(&ct, h, None, None).unwrap());
     assert_eq!(pt, big);
     drop_key(h).unwrap();
 
-    // Not folded into "Wrong password": the JS side matches it by value.
+    // Not folded into "Wrong password": JS matches it by value.
     let pw = encrypt_impl(&big, "[]", None, Some(Zeroizing::new(b"pw".to_vec()))).unwrap();
     assert_eq!(decrypt_with_password(&pw, b"pw".to_vec(), None, cap).unwrap_err(), OUTPUT_CAP_REACHED);
     let (_, pt) = unpack(&decrypt_with_password(&pw, b"pw".to_vec(), None, room).unwrap());
     assert_eq!(pt, big);
-    assert!(decrypt_with_password(&pw, b"no".to_vec(), None, cap)
-        .unwrap_err()
-        .starts_with("Wrong password"));
+    assert_eq!(
+        error_code::error_code(&decrypt_with_password(&pw, b"no".to_vec(), None, cap).unwrap_err()),
+        Some(ErrorCode::SymmetricWrongPassword)
+    );
 
     let text = "a".repeat(4096);
     let csf = cleartext_sign(&text, &alice).unwrap();
@@ -882,9 +841,8 @@ fn every_unattended_entry_point_holds_back_a_message_over_the_cap() {
 
 #[test]
 fn a_small_bomb_is_held_back_without_expanding_to_the_flat_allowance() {
-    // A few KiB of ciphertext that inflates to 32 MiB: inside the
-    // uncapped engine's 64 MiB allowance, so only the caller's cap stops
-    // it. Compressed here by hand -- this app's own encrypt does not.
+    // Inflates to 32 MiB, inside the uncapped 64 MiB allowance, so only the
+    // caller's cap stops it.
     let bob = aged_cert("Bob", DAY);
     let mut ct = Vec::new();
     {
@@ -910,8 +868,6 @@ fn a_small_bomb_is_held_back_without_expanding_to_the_flat_allowance() {
     assert_eq!(decrypt_with_handle(&ct, h, None, Some(1 << 20)).unwrap_err(), OUTPUT_CAP_REACHED);
     let capped = started.elapsed();
     drop_key(h).unwrap();
-    // Uncapped, the same message decrypts in full -- the cap is the only
-    // thing that made the run above stop early.
     let h = insert_key(&bob).unwrap();
     let (_, pt) = unpack(&decrypt_with_handle(&ct, h, None, None).unwrap());
     drop_key(h).unwrap();
@@ -921,7 +877,6 @@ fn a_small_bomb_is_held_back_without_expanding_to_the_flat_allowance() {
 
 // ── review regressions: framing, compression, concatenation, size ────
 
-/// `text` encrypted to `cert`, binary, no signature, no compression.
 fn encrypted_to(cert: &openpgp::Cert, text: &[u8]) -> Vec<u8> {
     let mut ct = Vec::new();
     {
@@ -939,8 +894,6 @@ fn encrypted_to(cert: &openpgp::Cert, text: &[u8]) -> Vec<u8> {
     ct
 }
 
-/// `inner` (already a whole OpenPGP message) wrapped in a Compressed
-/// packet, as some senders and gateways write it.
 fn compressed(inner: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
     {
@@ -953,8 +906,7 @@ fn compressed(inner: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Password-encrypted and compressed, `zeros` bytes of zeros inside:
-/// a small file that inflates to whatever size a test needs.
+/// Password-encrypted, compressed `zeros` zero bytes: a small inflating file.
 fn password_bomb(password: &str, zeros: usize) -> Vec<u8> {
     let mut ct = Vec::new();
     {
@@ -975,9 +927,8 @@ fn password_bomb(password: &str, zeros: usize) -> Vec<u8> {
 
 #[test]
 fn prose_starting_with_a_non_ascii_character_still_gets_the_framing_check() {
-    // The lead byte of a curly quote has its top bit set, like a packet
-    // header, and that used to be enough to skip the check: the prose
-    // above the block opened under a "valid" verdict.
+    // A curly quote's lead byte looks like a packet header; that once skipped
+    // the check and the prose above the block opened as "valid".
     let alice = aged_cert("Alice", DAY);
     let keys = Some(keys_json(&[&alice]));
     let signed = String::from_utf8(signed_only(b"ALICE GENUINE", &alice, true)).unwrap();
@@ -990,14 +941,12 @@ fn prose_starting_with_a_non_ascii_character_still_gets_the_framing_check() {
         assert!(open_unencrypted(wrapped.as_bytes(), keys.clone(), None).is_err(), "{lead:?}");
     }
     let curly = format!("\u{201c}Approved\u{201d}\n\n{signed}");
-    assert_eq!(open_unencrypted(curly.as_bytes(), keys.clone(), None).unwrap_err(), OUTSIDE_SIGNED);
+    assert_eq!(open_unencrypted(curly.as_bytes(), keys.clone(), None).unwrap_err(), outside_signed());
 
-    // Prose that is not even UTF-8 (a Latin-1 e-acute) is refused too.
     let mut latin1 = b"\xe9Approved\n\n".to_vec();
     latin1.extend_from_slice(signed.as_bytes());
     assert!(open_unencrypted(&latin1, keys.clone(), None).is_err());
 
-    // The block on its own, and binary input, open as before.
     let (sig, pt) = unpack(&open_unencrypted(signed.as_bytes(), keys.clone(), None).unwrap());
     assert_eq!((sig["signatureStatus"].as_str(), pt.as_slice()), (Some("valid"), &b"ALICE GENUINE"[..]));
     let binary = signed_only(b"ALICE GENUINE", &alice, false);
@@ -1014,7 +963,6 @@ fn an_encrypted_message_inside_a_compressed_packet_still_decrypts() {
     let shape: serde_json::Value = serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
     assert_eq!(shape["encrypted"], true);
     assert_eq!(shape["publicKey"], true);
-    // The key is picked for it, as for any message to Bob.
     let picked: Option<String> = serde_json::from_str(
         &select_decryption_key(&msg, &serde_json::to_string(&[public(&bob)]).unwrap()).unwrap(),
     )
@@ -1027,7 +975,6 @@ fn an_encrypted_message_inside_a_compressed_packet_still_decrypts() {
     assert_eq!(pt, b"compressed-wrapped secret");
     assert!(open_unencrypted(&msg, None, None).unwrap_err().contains("is encrypted"));
 
-    // The password flavour, `Compressed{ SKESK, SEIPD }`.
     let pw = encrypt_impl(b"by password", "[]", None, Some(Zeroizing::new(b"pw".to_vec()))).unwrap();
     let pw = compressed(&openpgp::PacketPile::from_bytes(&pw).unwrap().to_vec().unwrap());
     let shape: serde_json::Value = serde_json::from_str(&message_encryption(&pw).unwrap()).unwrap();
@@ -1038,15 +985,14 @@ fn an_encrypted_message_inside_a_compressed_packet_still_decrypts() {
 
 #[test]
 fn a_compressed_signed_message_is_still_unencrypted() {
-    // What `gpg --sign` writes: Compressed{ OPS, Literal, Sig }. Looking
-    // inside the Compressed packet must not change its answer.
+    // `gpg --sign` output, Compressed{ OPS, Literal, Sig }.
     let alice = aged_cert("Alice", DAY);
     let keys = Some(keys_json(&[&alice]));
     let msg = compressed(&signed_only(b"Alice's public statement", &alice, false));
     let shape: serde_json::Value = serde_json::from_str(&message_encryption(&msg).unwrap()).unwrap();
     assert_eq!(shape["encrypted"], false);
     let h = insert_key(&alice).unwrap();
-    assert_eq!(decrypt_with_handle(&msg, h, keys.clone(), None).unwrap_err(), NOT_ENCRYPTED);
+    assert_eq!(decrypt_with_handle(&msg, h, keys.clone(), None).unwrap_err(), not_encrypted());
     drop_key(h).unwrap();
     let (sig, pt) = unpack(&open_unencrypted(&msg, keys, None).unwrap());
     assert_eq!(sig["signatureStatus"], "valid");
@@ -1055,10 +1001,8 @@ fn a_compressed_signed_message_is_still_unencrypted() {
 
 #[test]
 fn spliced_messages_never_open_as_something_they_are_not() {
-    // The reviewer's concatenation probes, pinned: an encrypted message
-    // glued to a public signed one (either order), session keys with no
-    // data, a Marker in front. None may decrypt to the signed half, and
-    // none may open "unencrypted" past a session-key packet.
+    // Concatenation probes: none may decrypt to the signed half, nor open
+    // "unencrypted" past a session-key packet.
     let alice = aged_cert("Alice", DAY);
     let bob = aged_cert("Bob", DAY);
     let keys = Some(keys_json(&[&alice, &bob]));
@@ -1094,15 +1038,13 @@ fn spliced_messages_never_open_as_something_they_are_not() {
         .unwrap_err();
     assert!(!err.contains("ALICE"), "{err}");
 
-    // A Marker packet in front changes nothing: still unencrypted.
     let mut marked = Vec::new();
     openpgp::Packet::from(openpgp::packet::Marker::default()).serialize(&mut marked).unwrap();
     marked.extend_from_slice(&public_signed);
-    assert_eq!(decrypt_with_handle(&marked, h, keys.clone(), None).unwrap_err(), NOT_ENCRYPTED);
+    assert_eq!(decrypt_with_handle(&marked, h, keys.clone(), None).unwrap_err(), not_encrypted());
     let (sig, pt) = unpack(&open_unencrypted(&marked, keys.clone(), None).unwrap());
     assert_eq!((sig["signatureStatus"].as_str(), pt.as_slice()), (Some("valid"), &b"ALICE PUBLIC"[..]));
 
-    // Signed outside the encryption (OPS, {encrypted}, Sig) decrypts.
     let mut outer = Vec::new();
     {
         let recipients: Vec<_> = bob
@@ -1125,7 +1067,7 @@ fn spliced_messages_never_open_as_something_they_are_not() {
     assert!(open_unencrypted(&outer, keys, None).unwrap_err().contains("is encrypted"));
     drop_key(h).unwrap();
 
-    // The cap is inclusive: exactly the cap opens, a byte over waits.
+    // The cap is inclusive.
     let lit = literal_only(b"0123456789");
     assert!(open_unencrypted(&lit, None, Some(10)).is_ok());
     assert_eq!(open_unencrypted(&lit, None, Some(9)).unwrap_err(), OUTPUT_CAP_REACHED);
@@ -1134,22 +1076,20 @@ fn spliced_messages_never_open_as_something_they_are_not() {
 
 #[test]
 fn the_right_password_on_a_file_too_large_to_open_is_not_called_wrong() {
-    // Inflates past the 64 MiB allowance a small file gets. The password
-    // is right; only the size stops it, and the error must say so.
+    // Past the 64 MiB allowance with the right password: the error must say size.
     let ct = password_bomb("pw", (MIN_EXPANSION_ALLOWANCE + 1) as usize);
     assert!(ct.len() < 1 << 20, "{}", ct.len());
-    assert_eq!(decrypt_with_password(&ct, b"pw".to_vec(), None, None).unwrap_err(), TOO_LARGE_TO_OPEN);
-    // A wrong password on the same file is still a password problem.
-    assert!(decrypt_with_password(&ct, b"no".to_vec(), None, None)
-        .unwrap_err()
-        .starts_with("Wrong password"));
+    assert_eq!(decrypt_with_password(&ct, b"pw".to_vec(), None, None).unwrap_err(), too_large_to_open());
+    assert_eq!(
+        error_code::error_code(&decrypt_with_password(&ct, b"no".to_vec(), None, None).unwrap_err()),
+        Some(ErrorCode::SymmetricWrongPassword)
+    );
 }
 
 #[test]
 fn an_unattended_cap_bounds_what_the_engine_inflates_not_just_what_it_returns() {
-    // 40 MiB of zeros: over Sequoia's 25 MiB default read-ahead, which it
-    // fills at construction -- before `read_within` reads a byte. Under a
-    // 1 MiB cap the engine must never hold more than a few MiB.
+    // 40 MiB exceeds Sequoia's 25 MiB read-ahead, filled at construction; under
+    // a 1 MiB cap the engine must hold only a few MiB.
     const CAP: u32 = 1 << 20;
     assert_eq!(stream_buffer(Some(CAP), MAX_DECRYPTED_BYTES), Some(CAP as usize + 1));
     assert_eq!(stream_buffer(None, MAX_DECRYPTED_BYTES), None);
@@ -1159,11 +1099,8 @@ fn an_unattended_cap_bounds_what_the_engine_inflates_not_just_what_it_returns() 
     let (err, peak) =
         alloc_meter::peak_during(|| decrypt_with_password(&ct, b"pw".to_vec(), None, Some(CAP)));
     assert_eq!(err.unwrap_err(), OUTPUT_CAP_REACHED);
-    // A few times the cap (Sequoia keeps up to twice its buffer while
-    // streaming, plus the inflater's and cipher's own), never the 25 MiB.
     assert!(peak < 8 * CAP as usize, "decrypt held {peak} bytes under a {CAP} byte cap");
 
-    // Unencrypted, through the Verifier: same bound.
     let mut lit = Vec::new();
     {
         let m = openpgp::serialize::stream::Compressor::new(Message::new(&mut lit)).build().unwrap();
@@ -1178,8 +1115,7 @@ fn an_unattended_cap_bounds_what_the_engine_inflates_not_just_what_it_returns() 
     assert_eq!(err.unwrap_err(), OUTPUT_CAP_REACHED);
     assert!(peak < 8 * CAP as usize, "open held {peak} bytes under a {CAP} byte cap");
 
-    // And the meter does see Sequoia's read-ahead: uncapped, the same
-    // message is held whole (so the bound above is not vacuous).
+    // Uncapped, the message is held whole, so the bound above is not vacuous.
     let (ok, peak) = alloc_meter::peak_during(|| open_unencrypted(&lit, None, None));
     assert_eq!(unpack(&ok.unwrap()).1.len(), 40 << 20);
     assert!(peak > 25 << 20, "{peak}");

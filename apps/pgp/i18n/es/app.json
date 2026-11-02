@@ -110,51 +110,6 @@
   "app_onboarding_identity_body": {
     "message": "Cree un par de claves para cifrar, descifrar y firmar mensajes."
   },
-  "app_onboarding_name_label": {
-    "message": "Nombre *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "Su nombre completo"
-  },
-  "app_onboarding_email_label": {
-    "message": "Correo electrónico"
-  },
-  "app_onboarding_optional": {
-    "message": "opcional"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "usted@example.com"
-  },
-  "app_onboarding_comment_label": {
-    "message": "Comentario"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "p. ej. trabajo, personal"
-  },
-  "app_onboarding_advanced_options": {
-    "message": "Opciones avanzadas"
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "Algoritmo"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Claves modernas, rápidas y pequeñas. Recomendado para la mayoría de los usos."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Muy compatible, pero más lento, y su código RSA tiene un canal lateral de tiempo conocido (Marvin). Usa ECC salvo que necesites RSA."
-  },
-  "app_onboarding_expiry_label": {
-    "message": "Caducidad de la clave"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "Nunca"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ año"
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ años"
-  },
   "app_onboarding_create_key": {
     "message": "Crear mi clave PGP"
   },
@@ -262,9 +217,6 @@
   },
   "app_error_key_revoked": {
     "message": "Una de las claves implicadas en esta operación ha sido revocada por su propietario. Consiga su clave de reemplazo e impórtela."
-  },
-  "app_error_weak_algorithm": {
-    "message": "Esta clave usa un algoritmo de firma que ya no se considera seguro. Pida al propietario de la clave que la vuelva a emitir con SHA-256 o superior."
   },
   "app_error_corrupted": {
     "message": "Los datos están dañados o incompletos. Consiga una copia nueva y completa e inténtelo de nuevo."

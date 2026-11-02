@@ -147,66 +147,6 @@
     "message": "Create a keypair for encrypting, decrypting, and signing messages.",
     "description": "Onboarding, key creation step: paragraph under the heading."
   },
-  "app_onboarding_name_label": {
-    "message": "Name *",
-    "description": "Onboarding, key creation step: label of the required Name field. The asterisk marks it as required; keep it."
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "Your full name",
-    "description": "Onboarding, key creation step: placeholder of the Name field."
-  },
-  "app_onboarding_email_label": {
-    "message": "Email",
-    "description": "Onboarding, key creation step: label of the email field (followed by app_onboarding_optional in lighter text)."
-  },
-  "app_onboarding_optional": {
-    "message": "optional",
-    "description": "Onboarding, key creation step: lowercase word shown after a field label (Email, Comment) to mark the field as optional."
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "you@example.com",
-    "description": "Onboarding, key creation step: example address used as the email field placeholder. Use an obviously fake example address."
-  },
-  "app_onboarding_comment_label": {
-    "message": "Comment",
-    "description": "Onboarding, key creation step: label of the optional PGP user ID comment field."
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "e.g. work, personal",
-    "description": "Onboarding, key creation step: placeholder of the Comment field, suggesting what a comment might say."
-  },
-  "app_onboarding_advanced_options": {
-    "message": "Advanced options",
-    "description": "Onboarding, key creation step: small toggle that reveals the algorithm and expiry choices."
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "Algorithm",
-    "description": "Onboarding, advanced options: label of the key algorithm dropdown (ECC / RSA)."
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Modern, fast, small keys. Recommended for most uses.",
-    "description": "Onboarding, advanced options: tiny hint under the algorithm dropdown when ECC is selected."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Widely compatible, but slower, and its RSA code has a known timing side channel (Marvin). Prefer ECC unless you need RSA.",
-    "description": "Onboarding, advanced options: tiny hint under the algorithm dropdown when RSA is selected."
-  },
-  "app_onboarding_expiry_label": {
-    "message": "Key expiry",
-    "description": "Onboarding, advanced options: label of the key expiry dropdown."
-  },
-  "app_onboarding_expiry_never": {
-    "message": "Never",
-    "description": "Onboarding, key expiry dropdown option: the key never expires."
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ year",
-    "description": "Onboarding, key expiry dropdown option. $count$ is the number of years (1, 2 or 3)."
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ years",
-    "description": "Onboarding, key expiry dropdown option. $count$ is the number of years (1, 2 or 3)."
-  },
   "app_onboarding_create_key": {
     "message": "Create my PGP key",
     "description": "Onboarding, key creation step: primary full-width button that generates the key."
@@ -350,10 +290,6 @@
   "app_error_key_revoked": {
     "message": "A key involved in this operation has been revoked by its owner. Get their replacement key, then import it.",
     "description": "User-facing error: a recipient or signer key carries a revocation."
-  },
-  "app_error_weak_algorithm": {
-    "message": "This key uses a signature algorithm that is no longer considered secure. Ask the key's owner to reissue it with SHA-256 or stronger.",
-    "description": "User-facing error: the key was rejected by the security policy (SHA-1 / MD5 signatures). 'SHA-256' is a technical name."
   },
   "app_error_corrupted": {
     "message": "The data is corrupted or was cut off. Get a fresh, complete copy and try again.",

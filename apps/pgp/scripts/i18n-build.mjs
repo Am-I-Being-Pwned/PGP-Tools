@@ -1,29 +1,11 @@
 #!/usr/bin/env node
-// ──────────────────────────────────────────────────────────────────────
-// i18n-build.mjs — merge translation fragments into chrome.i18n bundles
-//
-// SOURCE OF TRUTH:  i18n/<locale>/<area>.json   (hand-edited, committed)
-// GENERATED:        public/_locales/<locale>/messages.json
-//                   lib/i18n/messages.generated.ts
-//
-// Both generated outputs are committed so `wxt`, `tsc` and vitest work
-// from a fresh checkout without a pre-step; `scripts/i18n-check.mjs`
-// fails CI if they drift from the fragments.
-//
-// Fragment format is chrome.i18n's, minus the ceremony: every key is
-//   { "message": "Hello $name$", "description": "why / where" }
-// with placeholders written INLINE as `$name$` (lowercase). This script
-// emits the `placeholders` map Chrome wants (`$1`, `$2`, ... assigned in
-// order of first appearance in the `en` message) and records that order
-// in the generated TS so `t()` can take a named-object argument.
-//
-// Keys are area-prefixed snake_case (`settings_title`). Plural forms
-// are `key_one` / `key_other` (and `_zero` `_two` `_few` `_many` where a
-// language needs them); `tn()` picks by Intl.PluralRules and always
-// substitutes `$count$`.
-//
-// Usage:  node scripts/i18n-build.mjs
-// ──────────────────────────────────────────────────────────────────────
+// i18n-build.mjs — merge i18n/<locale>/<area>.json fragments into
+// public/_locales/<locale>/messages.json and src/lib/i18n/messages.generated.ts.
+// Both outputs are committed so a fresh checkout builds; i18n-check fails on drift.
+// Placeholders are written inline as `$name$`; this emits Chrome's
+// `placeholders` map ($1, $2… by first appearance in en) and records the
+// order so `t()` can take a named object. Plurals: `key_one` / `key_other`
+// (etc.), picked by `tn()` via Intl.PluralRules.
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,6 +15,7 @@ export const FRAGMENT_DIR = join(APP_DIR, "i18n");
 export const LOCALES_DIR = join(APP_DIR, "public", "_locales");
 export const GENERATED_TS = join(
   APP_DIR,
+  "src",
   "lib",
   "i18n",
   "messages.generated.ts",

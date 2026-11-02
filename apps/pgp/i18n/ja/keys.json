@@ -134,14 +134,8 @@
   "keys_contacts_heading": {
     "message": "連絡先"
   },
-  "keys_contacts_heading_encrypted": {
-    "message": "連絡先 (暗号化済み)"
-  },
   "keys_contacts_heading_count": {
     "message": "連絡先 ($count$)"
-  },
-  "keys_contacts_locked": {
-    "message": "連絡先は暗号化されています。表示や管理には PGP Tools のロックを解除してください。"
   },
   "keys_search_contacts_placeholder": {
     "message": "連絡先を検索..."

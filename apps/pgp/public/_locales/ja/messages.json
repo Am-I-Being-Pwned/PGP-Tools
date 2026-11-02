@@ -547,9 +547,6 @@
   "app_error_vault_locked": {
     "message": "保管庫がロックされているため、何も変更されませんでした。ロックを解除してから、もう一度実行してください。"
   },
-  "app_error_weak_algorithm": {
-    "message": "この鍵は、もはや安全とみなされていない署名アルゴリズムを使用しています。鍵の所有者に SHA-256 以上で再発行するよう依頼してください。"
-  },
   "app_error_weak_password": {
     "message": "そのパスワードは短すぎます。8 文字以上にしてください。"
   },
@@ -603,57 +600,11 @@
   "app_nav_label": {
     "message": "メイン ナビゲーション"
   },
-  "app_onboarding_advanced_options": {
-    "message": "詳細オプション"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "最新の方式で高速、鍵も小さめです。ほとんどの用途におすすめです。"
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "互換性は高いものの低速で、RSA の実装には既知のタイミングサイドチャネル (Marvin) があります。RSA が必要でなければ ECC を選んでください。"
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "アルゴリズム"
-  },
-  "app_onboarding_comment_label": {
-    "message": "コメント"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "例: 仕事用、個人用"
-  },
   "app_onboarding_create_key": {
     "message": "PGP 鍵を作成する"
   },
   "app_onboarding_create_passkey": {
     "message": "パスキーを作成"
-  },
-  "app_onboarding_email_label": {
-    "message": "メールアドレス"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "you@example.com"
-  },
-  "app_onboarding_expiry_label": {
-    "message": "鍵の有効期限"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "無期限"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ 年",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ 年",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
   },
   "app_onboarding_generate_failed": {
     "message": "鍵の生成に失敗しました"
@@ -673,20 +624,11 @@
   "app_onboarding_keep_defaults": {
     "message": "デフォルトのままにする"
   },
-  "app_onboarding_name_label": {
-    "message": "名前 *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "氏名"
-  },
   "app_onboarding_name_required": {
     "message": "名前は必須です。"
   },
   "app_onboarding_next": {
     "message": "次へ"
-  },
-  "app_onboarding_optional": {
-    "message": "省略可"
   },
   "app_onboarding_passkey_prompt": {
     "message": "ブラウザのパスキーの案内に従ってください..."
@@ -2567,12 +2509,6 @@
         "content": "$1"
       }
     }
-  },
-  "keys_contacts_heading_encrypted": {
-    "message": "連絡先 (暗号化済み)"
-  },
-  "keys_contacts_locked": {
-    "message": "連絡先は暗号化されています。表示や管理には PGP Tools のロックを解除してください。"
   },
   "keys_contacts_removed_one": {
     "message": "連絡先を削除しました"

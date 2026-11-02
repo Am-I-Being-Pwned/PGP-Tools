@@ -1,6 +1,9 @@
-import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
-import { cn } from "@amibeingpwned/ui";
-import { formatShortcut, isMacPlatform } from "@amibeingpwned/ui/kbd-helpers";
+import { cn } from "./cn";
+import {
+  formatShortcut,
+  isMacPlatform,
+  type ShortcutSpec,
+} from "./kbd-helpers";
 
 export type { ShortcutSpec };
 export {
@@ -8,16 +11,10 @@ export {
   formatShortcut,
   formatShortcutTitle,
   isMacPlatform,
-} from "@amibeingpwned/ui/kbd-helpers";
+} from "./kbd-helpers";
 
-/**
- * Keycap chips for a shortcut: one small rounded chip per
- * key, platform-aware (⌘ on macOS, Ctrl elsewhere). Styled with
- * currentColor so the chips adapt to whatever button/surface they sit
- * in, and dim with it when disabled. Decorative only (aria-hidden) —
- * the shortcut belongs in `aria-keyshortcuts` on the interactive
- * element itself.
- */
+/** Decorative (aria-hidden): the shortcut belongs in `aria-keyshortcuts`
+ *  on the interactive element. */
 export function Kbd({
   shortcut,
   className,

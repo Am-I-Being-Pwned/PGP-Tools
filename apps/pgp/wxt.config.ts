@@ -21,7 +21,7 @@ const PROD_CSP =
     // `/gists` is refused by the browser. What they do NOT buy: CSP
     // does not path-match query strings, so `?anything=x` appended to an
     // allowed path still passes. The real defence against a crafted
-    // path is lib/github/username.ts and lib/keyserver/query.ts, which
+    // path is src/lib/github/username.ts and src/lib/keyserver/query.ts, which
     // pin the charset of what goes into the path and assert the final
     // origin + pathname before fetching.
     //
@@ -91,7 +91,7 @@ function panelCspMeta(enabled: boolean) {
  *
  * Firefox does not work and is not expected to for the foreseeable
  * future: the blocker is passkey unlock. That path derives its key from
- * the WebAuthn PRF extension (`lib/protection/webauthn-prf.ts`), and
+ * the WebAuthn PRF extension (`src/lib/protection/webauthn-prf.ts`), and
  * without it a passkey-protected vault cannot be opened at all -- this
  * is not a degraded experience, it is a user who cannot reach their
  * keys. Password protection would work; shipping a build where half the
@@ -137,6 +137,7 @@ const enListing = JSON.parse(
 ) as Record<"extName" | "extDescription", { message: string }>;
 
 export default defineConfig({
+  srcDir: "src",
   modules: ["@wxt-dev/module-react"],
   manifest: ({ browser }) => ({
     // Name and summary come from public/_locales. The store keeps one shared
@@ -183,7 +184,7 @@ export default defineConfig({
     // _execute_action + the three mode commands below consume all
     // four, so open-verify ships without a default -- users can bind
     // it at chrome://extensions/shortcuts. Command ids are dispatched
-    // in background.ts via lib/mode-commands.ts.
+    // in background.ts via src/lib/mode-commands.ts.
     commands: {
       _execute_action: {
         suggested_key: {

@@ -1,0 +1,223 @@
+import { useRef, useState } from "react";
+import {
+  BoldIcon,
+  CheckIcon,
+  CodeIcon,
+  ItalicIcon,
+  LanguagesIcon,
+  LoaderCircleIcon,
+  SearchIcon,
+  StrikethroughIcon,
+} from "lucide-react";
+
+import {
+  ariaKeyShortcuts,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  isMacPlatform,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@amibeingpwned/ui";
+
+import { HoverHint } from "~/components/shared/HoverHint";
+import { translationLanguages } from "~/lib/ai/languages";
+import type { TranslationStatus } from "~/lib/ai/run-translation";
+import {
+  FIND_SHORTCUT,
+  STYLE_LABELS,
+  STYLE_SHORTCUTS,
+} from "~/lib/compose/shortcuts";
+import type { InlineStyle } from "~/lib/compose/text-format";
+import { t } from "~/lib/i18n";
+
+export interface ComposeTranslateProps {
+  status: TranslationStatus;
+  targetLanguage: string | null;
+  onTranslate: (language: string) => void;
+  onUndo: () => void;
+  canUndo: boolean;
+}
+
+interface ComposeToolbarProps {
+  onStyle: (style: InlineStyle) => void;
+  onFind: () => void;
+  translate?: ComposeTranslateProps;
+}
+
+const STYLE_ICONS: Record<
+  InlineStyle,
+  React.ComponentType<{ className?: string }>
+> = {
+  bold: BoldIcon,
+  italic: ItalicIcon,
+  strike: StrikethroughIcon,
+  code: CodeIcon,
+};
+
+const STYLE_ORDER: InlineStyle[] = ["bold", "italic", "strike", "code"];
+
+const CHIP =
+  "text-muted-foreground hover:text-foreground hover:bg-accent flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:opacity-60";
+
+export function ComposeToolbar({
+  onStyle,
+  onFind,
+  translate,
+}: ComposeToolbarProps) {
+  const mac = isMacPlatform();
+  const [menuOpen, setMenuOpen] = useState(false);
+  return (
+    <div
+      role="toolbar"
+      aria-label={t("workspace_message_tools")}
+      className="flex items-center gap-0.5"
+    >
+      {STYLE_ORDER.map((style) => {
+        const Icon = STYLE_ICONS[style];
+        return (
+          <HoverHint
+            align="end"
+            key={style}
+            label={STYLE_LABELS[style]}
+            shortcut={STYLE_SHORTCUTS[style]}
+          >
+            <button
+              type="button"
+              aria-label={STYLE_LABELS[style]}
+              aria-keyshortcuts={ariaKeyShortcuts(STYLE_SHORTCUTS[style], mac)}
+              // Keep focus and the selection in the textarea.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onStyle(style)}
+              // Out of the Tab order: Tab from the message goes to Recipients.
+              tabIndex={-1}
+              className={CHIP}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </button>
+          </HoverHint>
+        );
+      })}
+
+      <span aria-hidden className="bg-border mx-1 h-4 w-px" />
+
+      <HoverHint
+        align="end"
+        label={t("workspace_find_replace")}
+        shortcut={FIND_SHORTCUT}
+      >
+        <button
+          type="button"
+          aria-label={t("workspace_find_replace")}
+          aria-keyshortcuts={ariaKeyShortcuts(FIND_SHORTCUT, mac)}
+          onClick={onFind}
+          tabIndex={-1}
+          className={CHIP}
+        >
+          <SearchIcon className="h-3.5 w-3.5" />
+        </button>
+      </HoverHint>
+
+      {translate && (
+        <TranslateMenu
+          {...translate}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+        />
+      )}
+    </div>
+  );
+}
+
+function TranslateMenu({
+  status,
+  targetLanguage,
+  onTranslate,
+  onUndo,
+  canUndo,
+  open,
+  onOpenChange: setOpen,
+}: ComposeTranslateProps & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const busy = status.kind === "working" || status.kind === "downloading";
+  if (status.kind === "unavailable") return null;
+  // Never names the last pick: the button opens a list, not a one-click translate.
+  const label = busy ? t("workspace_translating") : t("workspace_translate");
+
+  return (
+    <>
+      <HoverHint align="end" label={label}>
+        <button
+          ref={buttonRef}
+          type="button"
+          aria-label={label}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          disabled={busy}
+          tabIndex={-1}
+          onClick={() => setOpen(!open)}
+          className={CHIP}
+        >
+          {busy ? (
+            <LoaderCircleIcon className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+          ) : (
+            <LanguagesIcon className="h-3.5 w-3.5" />
+          )}
+        </button>
+      </HoverHint>
+      {/* Anchored by ref, not a trigger: a nested trigger would bind to the
+          hover label's own popover. */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverAnchor virtualRef={buttonRef} />
+        <PopoverContent align="end" side="top" className="w-56 p-0">
+          <Command label={t("workspace_translate_menu_heading")}>
+            <CommandInput
+              placeholder={t("workspace_search_languages")}
+              autoFocus
+            />
+            <CommandList className="max-h-60">
+              <CommandEmpty>{t("workspace_no_such_language")}</CommandEmpty>
+              <CommandGroup heading={t("workspace_translate_menu_heading")}>
+                {translationLanguages().map((l) => (
+                  <CommandItem
+                    key={l.code}
+                    value={`${l.label} ${l.code}`}
+                    onSelect={() => {
+                      setOpen(false);
+                      onTranslate(l.code);
+                    }}
+                  >
+                    <span className="flex-1">{l.label}</span>
+                    {l.code === targetLanguage && (
+                      <CheckIcon className="text-muted-foreground h-3.5 w-3.5" />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              {canUndo && (
+                <CommandGroup>
+                  <CommandItem
+                    value="restore the original"
+                    onSelect={() => {
+                      setOpen(false);
+                      onUndo();
+                    }}
+                  >
+                    {t("workspace_restore_original")}
+                  </CommandItem>
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </>
+  );
+}

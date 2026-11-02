@@ -65,10 +65,19 @@ export const baseConfig = defineConfig(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      // One import statement per module: types inline beside values, a
+      // whole-type import stays `import type` (no empty side-effect import).
       "@typescript-eslint/consistent-type-imports": [
         "warn",
-        { prefer: "type-imports", fixStyle: "separate-type-imports" },
+        { prefer: "type-imports", fixStyle: "inline-type-imports" },
       ],
+      "@typescript-eslint/no-import-type-side-effects": "error",
+      // A file past this is doing several jobs: split it.
+      "max-lines": [
+        "warn",
+        { max: 800, skipBlankLines: true, skipComments: true },
+      ],
+      "import/no-duplicates": ["error", { "prefer-inline": true }],
       "@typescript-eslint/no-misused-promises": [
         2,
         { checksVoidReturn: { attributes: false } },
@@ -80,7 +89,6 @@ export const baseConfig = defineConfig(
         },
       ],
       "@typescript-eslint/no-non-null-assertion": "error",
-      "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
       "no-restricted-syntax": [
         "error",
         {
@@ -100,6 +108,11 @@ export const baseConfig = defineConfig(
         },
       ],
     },
+  },
+  {
+    // Long test files are a list of cases, not a design smell.
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts"],
+    rules: { "max-lines": "off" },
   },
   {
     linterOptions: { reportUnusedDisableDirectives: true },

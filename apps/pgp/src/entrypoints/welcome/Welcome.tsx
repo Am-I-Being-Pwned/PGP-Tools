@@ -1,0 +1,82 @@
+import { useState } from "react";
+import { ArrowRightIcon, LockKeyholeIcon } from "lucide-react";
+
+import { Button } from "@amibeingpwned/ui";
+
+import { t } from "~/lib/i18n";
+
+export function Welcome() {
+  const [opened, setOpened] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleStart = async () => {
+    setError(null);
+    try {
+      // sidePanel.open needs a user gesture, hence this welcome page.
+      const win = await chrome.windows.getCurrent();
+      if (win.id === undefined) {
+        throw new Error("No window id");
+      }
+      await chrome.sidePanel.open({ windowId: win.id });
+      setOpened(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("app_welcome_open_failed"));
+    }
+  };
+
+  if (opened) {
+    return (
+      <div className="flex min-h-screen items-center justify-end p-12">
+        <div className="flex max-w-md items-center gap-6 text-right">
+          <p className="text-2xl leading-snug font-medium">
+            {t("app_welcome_opened")}
+          </p>
+          <ArrowRightIcon className="text-good h-16 w-16 shrink-0" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-6 text-center">
+        <div className="bg-card text-good mx-auto flex size-[72px] items-center justify-center rounded-[18px]">
+          <LockKeyholeIcon className="size-7" aria-hidden="true" />
+        </div>
+
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {t("app_welcome_title")}
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {t("app_welcome_body")}
+          </p>
+        </div>
+
+        <Button size="lg" className="w-full" onClick={() => void handleStart()}>
+          {t("app_welcome_start")}
+        </Button>
+
+        {error && (
+          <p className="text-bad text-xs" role="alert">
+            {error}
+          </p>
+        )}
+
+        <p className="text-muted-foreground text-xs">
+          {t("app_welcome_credit_before")}{" "}
+          <a
+            href="https://amibeingpwned.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-good underline underline-offset-2"
+          >
+            {/* i18n-ignore */}
+            Am I Being Pwned
+          </a>
+          {t("app_welcome_credit_after")}
+        </p>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,184 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  outputFileName,
+  uniqueOutputNames,
+} from "~/components/workspace/output-name";
+
+// Fixed clock: 16 Jul 2026, 14:32 local.
+const NOW = new Date(2026, 6, 16, 14, 32);
+const AT = { now: NOW };
+const TS = "2026-07-16-1432";
+
+describe("outputFileName", () => {
+  it("names text-input encrypt output with recipient and timestamp", () => {
+    expect(outputFileName("encrypt", [], true, AT)).toBe(`message.${TS}.gpg`);
+    expect(
+      outputFileName("encrypt", [], true, { ...AT, recipients: ["Alice"] }),
+    ).toBe(`message.to-alice.${TS}.gpg`);
+    // Pasted text: named for what it is, never like ciphertext.
+    expect(outputFileName("decrypt", [], true)).toBe("decrypted.txt");
+    expect(outputFileName("decrypt", [], true, { binary: true })).toBe(
+      "decrypted.bin",
+    );
+    expect(outputFileName("verify", [], true)).toBe("verified.txt");
+    expect(outputFileName("sign", [], true)).toBe("signed.asc");
+  });
+
+  it("tags a single-file encrypt with recipient and timestamp", () => {
+    expect(
+      outputFileName("encrypt", ["report.pdf"], true, {
+        ...AT,
+        recipients: ["Alice"],
+      }),
+    ).toBe(`report.pdf.to-alice.${TS}.gpg`);
+  });
+
+  it("counts extra recipients instead of listing them", () => {
+    expect(
+      outputFileName("encrypt", [], true, {
+        ...AT,
+        recipients: ["Alice", "Bob", "Carol"],
+      }),
+    ).toBe(`message.to-alice+2.${TS}.gpg`);
+  });
+
+  it("slugifies hostile recipient names and caps their length", () => {
+    expect(
+      outputFileName("encrypt", [], true, {
+        ...AT,
+        recipients: ["CERT.br - Computer Emergency Response Team Brazil"],
+      }),
+    ).toBe(`message.to-cert-br-computer-emergen.${TS}.gpg`);
+    expect(
+      outputFileName("encrypt", [], true, { ...AT, recipients: ["!!!"] }),
+    ).toBe(`message.to-recipient.${TS}.gpg`);
+  });
+
+  it("appends .asc when signing a single file", () => {
+    expect(outputFileName("sign", ["notes.txt"], true)).toBe("notes.txt.asc");
+  });
+
+  it("strips the encryption extension when decrypting", () => {
+    expect(outputFileName("decrypt", ["report.pdf.gpg"], true)).toBe(
+      "report.pdf",
+    );
+    expect(outputFileName("decrypt", ["msg.asc"], true)).toBe("msg");
+    expect(outputFileName("decrypt", ["data.PGP"], true)).toBe("data");
+  });
+
+  it("keeps the name when there is no known extension to strip", () => {
+    expect(outputFileName("decrypt", ["report.bin"], true)).toBe("report.bin");
+  });
+
+  it("never names a plaintext like ciphertext when stripping leaves nothing", () => {
+    expect(outputFileName("decrypt", [".gpg"], true)).toBe("decrypted");
+  });
+
+  it("removes a right-to-left override from a name it saves under", () => {
+    // "inv<RLO>csa.exe" is shown as "invexe.asc"; saved raw, the file
+    // lands as an .exe the user believed was a signature.
+    expect(outputFileName("decrypt", ["inv\u202ecsa.exe.gpg"], true)).toBe(
+      "invcsa.exe",
+    );
+  });
+
+  it("names the combined archive for zipped multi-file input", () => {
+    const files = ["a.txt", "b.txt"];
+    expect(
+      outputFileName("encrypt", files, true, { ...AT, recipients: ["Alice"] }),
+    ).toBe(`files.to-alice.${TS}.zip.gpg`);
+    expect(outputFileName("decrypt", files, true)).toBe("decrypted-files.zip");
+  });
+
+  it("uses the first file's name for unzipped multi-file input", () => {
+    expect(
+      outputFileName("encrypt", ["a.txt", "b.txt"], false, {
+        ...AT,
+        recipients: ["Alice"],
+      }),
+    ).toBe(`a.txt.to-alice.${TS}.gpg`);
+  });
+  // The extension follows the ENGINE, not the mode.
+  it("names age ciphertext .age, not .gpg", () => {
+    expect(
+      outputFileName("encrypt", [], false, {
+        ...AT,
+        recipients: ["Alice"],
+        engine: "ssh",
+      }),
+    ).toBe(`message.to-alice.${TS}.age`);
+    expect(
+      outputFileName("encrypt", ["a.txt", "b.txt"], true, {
+        ...AT,
+        recipients: ["Alice"],
+        engine: "ssh",
+      }),
+    ).toBe(`files.to-alice.${TS}.zip.age`);
+  });
+
+  it("keeps .gpg for OpenPGP, and for an engine it wasn't told", () => {
+    expect(
+      outputFileName("encrypt", [], false, {
+        ...AT,
+        recipients: ["Alice"],
+        engine: "pgp",
+      }),
+    ).toBe(`message.to-alice.${TS}.gpg`);
+    // No engine passed: defaults to .gpg.
+    expect(
+      outputFileName("encrypt", [], false, { ...AT, recipients: ["Alice"] }),
+    ).toBe(`message.to-alice.${TS}.gpg`);
+  });
+
+  it("strips .age when decrypting, like the PGP extensions", () => {
+    expect(outputFileName("decrypt", ["report.pdf.age"], true)).toBe(
+      "report.pdf",
+    );
+    expect(outputFileName("decrypt", ["data.AGE"], true)).toBe("data");
+  });
+});
+
+describe("uniqueOutputNames", () => {
+  it("numbers a second decrypt that lands on the same name", () => {
+    const names = ["report.txt.gpg", "report.txt.asc"].map((n) =>
+      outputFileName("decrypt", [n], false),
+    );
+    expect(names).toEqual(["report.txt", "report.txt"]);
+    expect(uniqueOutputNames(names)).toEqual(["report.txt", "report (2).txt"]);
+  });
+
+  it("leaves a batch with no clash alone", () => {
+    expect(uniqueOutputNames(["a.txt", "b.txt"])).toEqual(["a.txt", "b.txt"]);
+  });
+
+  it("treats names that differ only in case as the same file", () => {
+    expect(uniqueOutputNames(["Report.txt", "report.txt"])).toEqual([
+      "Report.txt",
+      "report (2).txt",
+    ]);
+  });
+
+  it("never renames onto a name another input already has", () => {
+    expect(
+      uniqueOutputNames(["report.txt", "report.txt", "report (2).txt"]),
+    ).toEqual(["report.txt", "report (3).txt", "report (2).txt"]);
+  });
+
+  it("numbers names without an extension, and dotfiles, whole", () => {
+    expect(uniqueOutputNames(["notes", "notes", ".env", ".env"])).toEqual([
+      "notes",
+      "notes (2)",
+      ".env",
+      ".env (2)",
+    ]);
+  });
+
+  it("is deterministic for three of the same", () => {
+    expect(uniqueOutputNames(["x.bin", "x.bin", "x.bin"])).toEqual([
+      "x.bin",
+      "x (2).bin",
+      "x (3).bin",
+    ]);
+  });
+});

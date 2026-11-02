@@ -8,13 +8,14 @@ import { defineConfig } from "@playwright/test";
  * Chromium's new headless mode (which loads extensions); set `HEADED=1`
  * to watch a real window.
  *
- * State (chrome.storage) persists within a single test file's context, so
- * tests run serially with one worker to keep ordering deterministic.
+ * Every test launches its own throwaway profile, so files run across workers;
+ * tests inside a file keep their order (fullyParallel: false) for specs that
+ * share setup through beforeAll.
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./tests/e2e",
   fullyParallel: false,
-  workers: 1,
+  workers: process.env.CI ? 4 : "50%",
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: [["list"]],

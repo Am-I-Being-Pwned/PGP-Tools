@@ -72,11 +72,7 @@
     "message": "Sie können dann keine Nachrichten mehr für diesen Kontakt verschlüsseln oder seine Signaturen verifizieren. Sie können seinen öffentlichen Schlüssel später erneut importieren."
   },
   "keys_contacts_heading": { "message": "Kontakte" },
-  "keys_contacts_heading_encrypted": { "message": "Kontakte (verschlüsselt)" },
   "keys_contacts_heading_count": { "message": "Kontakte ($count$)" },
-  "keys_contacts_locked": {
-    "message": "Die Kontakte sind verschlüsselt. Entsperren Sie PGP Tools, um sie anzuzeigen und zu verwalten."
-  },
   "keys_search_contacts_placeholder": { "message": "Kontakte durchsuchen..." },
   "keys_no_contacts_match": { "message": "Keine Kontakte zu „$query$“" },
   "keys_wrong_password": { "message": "Falsches Passwort" },

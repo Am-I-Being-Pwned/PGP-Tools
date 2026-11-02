@@ -1,23 +1,11 @@
-//! Known-answer tests for every primitive whose output is persisted.
+//! Known-answer tests for every primitive whose output is persisted
+//! (Argon2id, HKDF-SHA256, AES-256-GCM, AES-CFB). One byte of drift after a
+//! dependency bump would lock users out of their vaults. Standard vectors
+//! (RFC 5869, NIST SP 800-38A) prove the textbook primitive; crate vectors
+//! pin the exact bytes this crate writes and must read back forever.
 //!
-//! Argon2id derives vault keys, HKDF-SHA256 + AES-256-GCM seal the blobs
-//! on users' disks, and AES-CFB decrypts GnuPG secret keys at import. A
-//! dependency bump that changed a single output byte of any of them would
-//! lock users out of their vaults, so every vector below is pinned:
-//!
-//! - **Standard vectors** (RFC 5869 HKDF, NIST SP 800-38A CFB128) prove
-//!   the primitives are the textbook ones.
-//! - **Crate vectors** (Argon2id derivations, sealed-blob layouts, the
-//!   contacts / store key schedule) were generated with the RustCrypto
-//!   versions this crate shipped with before the 2026-10 major bump
-//!   (argon2 0.5.3, aes-gcm 0.10.3, hkdf 0.12.4, sha2 0.10.9, aes 0.8.4,
-//!   cfb-mode 0.8.2) and cross-checked against Python `cryptography`
-//!   where it has the primitive. They pin the exact bytes this crate
-//!   writes and must read back forever.
-//!
-//! **Never edit an expected value to make a test pass.** A mismatch here
-//! means stored vaults/backups would no longer open. All inputs are fixed,
-//! synthetic test values -- there is no real key material in this file.
+//! **Never edit an expected value to make a test pass.** All inputs are
+//! synthetic -- no real key material in this file.
 
 use super::*;
 use openpgp::types::SymmetricAlgorithm;
@@ -28,7 +16,7 @@ fn hex(bytes: &[u8]) -> String {
 
 fn unhex(s: &str) -> Vec<u8> {
     let s: String = s.chars().filter(|c| !c.is_whitespace()).collect();
-    assert!(s.len() % 2 == 0, "odd-length hex");
+    assert!(s.len().is_multiple_of(2), "odd-length hex");
     (0..s.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
@@ -106,8 +94,7 @@ fn kat_contacts_key_from_prf() {
     );
 }
 
-/// Argon2id output fed into HKDF with the same salt: the password-unlock
-/// contacts key schedule end to end.
+/// The password-unlock contacts key schedule end to end.
 #[test]
 fn kat_contacts_key_from_password() {
     let key = derive_contacts_key_from_password(PASSWORD, SALT, 4096, 3, 1).unwrap();
@@ -136,8 +123,7 @@ fn kat_aes_gcm_decrypt() {
     assert!(aes_gcm_decrypt(&unhex(GCM_KEY), &unhex(GCM_IV), &unhex(GCM_CT), b"other").is_err());
 }
 
-/// `aes_gcm_encrypt` draws its IV from the crate CSPRNG; pinned, the whole
-/// `[iv][ct||tag]` output is a fixed string.
+/// IV pinned via the RNG, so the whole `[iv][ct||tag]` output is fixed.
 #[test]
 fn kat_aes_gcm_encrypt_fixed_rng() {
     let out = with_fixed_rng(0x5a, || {
@@ -216,8 +202,7 @@ fn kat_seal_with_prf_blob() {
     assert_eq!(opened.as_slice(), GCM_PT);
 }
 
-/// Contacts session key -> HKDF store subkey -> AES-GCM, i.e. the
-/// `encryptStore` / `decryptStore` path history and backups use.
+/// The `encryptStore` / `decryptStore` path history and backups use.
 #[test]
 fn kat_store_envelope() {
     init_contacts_session_with_prf(vec![0x11; 32], vec![0x22; 32]).unwrap();

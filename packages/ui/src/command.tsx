@@ -4,7 +4,7 @@ import type * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon } from "lucide-react";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 function Command({
   className,

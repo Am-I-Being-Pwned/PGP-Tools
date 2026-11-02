@@ -611,9 +611,6 @@
   "app_error_vault_locked": {
     "message": "Ваше хранилище заблокировано, поэтому ничего не изменено. Разблокируйте его и повторите операцию."
   },
-  "app_error_weak_algorithm": {
-    "message": "Этот ключ использует алгоритм подписи, который больше не считается безопасным. Попросите владельца ключа перевыпустить его с SHA-256 или более стойким алгоритмом."
-  },
   "app_error_weak_password": {
     "message": "Этот пароль слишком короткий. Используйте не менее 8 символов."
   },
@@ -689,73 +686,11 @@
   "app_nav_label": {
     "message": "Основная навигация"
   },
-  "app_onboarding_advanced_options": {
-    "message": "Дополнительные параметры"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Широко совместим, но медленнее, и в его реализации RSA есть известный канал утечки по времени (Marvin). Выбирайте ECC, если RSA не нужен."
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "Алгоритм"
-  },
-  "app_onboarding_comment_label": {
-    "message": "Комментарий"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "например, рабочий, личный"
-  },
   "app_onboarding_create_key": {
     "message": "Создать мой PGP-ключ"
   },
   "app_onboarding_create_passkey": {
     "message": "Создать ключ доступа"
-  },
-  "app_onboarding_email_label": {
-    "message": "Эл. почта"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "you@example.com"
-  },
-  "app_onboarding_expiry_label": {
-    "message": "Срок действия ключа"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "Бессрочно"
-  },
-  "app_onboarding_expiry_years_few": {
-    "message": "$count$ года",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "app_onboarding_expiry_years_many": {
-    "message": "$count$ лет",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ год",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ года",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
   },
   "app_onboarding_generate_failed": {
     "message": "Не удалось создать ключ"
@@ -775,20 +710,11 @@
   "app_onboarding_keep_defaults": {
     "message": "Оставить настройки по умолчанию"
   },
-  "app_onboarding_name_label": {
-    "message": "Имя *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "Ваше полное имя"
-  },
   "app_onboarding_name_required": {
     "message": "Укажите имя."
   },
   "app_onboarding_next": {
     "message": "Далее"
-  },
-  "app_onboarding_optional": {
-    "message": "необязательно"
   },
   "app_onboarding_passkey_prompt": {
     "message": "Следуйте запросу браузера о ключе доступа..."
@@ -3155,12 +3081,6 @@
         "content": "$1"
       }
     }
-  },
-  "keys_contacts_heading_encrypted": {
-    "message": "Контакты (зашифрованы)"
-  },
-  "keys_contacts_locked": {
-    "message": "Контакты зашифрованы. Разблокируйте PGP Tools, чтобы просматривать их и управлять ими."
   },
   "keys_contacts_removed_few": {
     "message": "Удалено $count$ контакта",

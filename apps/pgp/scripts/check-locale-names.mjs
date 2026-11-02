@@ -1,14 +1,8 @@
 #!/usr/bin/env node
 /**
- * Every locale's store name and summary must fit the store and follow the
- * keyword-first rule.
- *
- * The store indexes each locale's name as its own matchable string and ranks
- * by how much of the title the query covers, so a brand prefix on every
- * localised name is dead weight in front of the words people search for. The
- * `en` name is the exception and is pinned: it holds #1 for "pgp tools".
- *
- *   node scripts/check-locale-names.mjs
+ * Every locale's store name and summary must fit the store and be
+ * keyword-first (the store ranks by how much of the title a query covers).
+ * `en` is pinned brand-first: it holds #1 for "pgp tools".
  */
 import { readdirSync, readFileSync } from "node:fs";
 
@@ -44,8 +38,7 @@ for (const locale of readdirSync(DIR).sort()) {
     if (!name.startsWith(`${BRAND} - `))
       fail(`English locales start with "${BRAND} - "`);
   } else {
-    // Every other locale: native keyword phrase, then " - " and one or two
-    // English tails that claim a query of their own ("X Alternative",
+    // Others: native keyword phrase, " - ", then English tails ("X Alternative",
     // "Y Compatible"). Nominative use only; never a bare competitor name.
     if (name.startsWith(BRAND))
       fail("name starts with the brand; lead with the native keyword phrase");

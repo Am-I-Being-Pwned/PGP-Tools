@@ -68,29 +68,6 @@
   "app_onboarding_identity_body": {
     "message": "Создайте пару ключей для шифрования, расшифровки и подписи сообщений."
   },
-  "app_onboarding_name_label": { "message": "Имя *" },
-  "app_onboarding_name_placeholder": { "message": "Ваше полное имя" },
-  "app_onboarding_email_label": { "message": "Эл. почта" },
-  "app_onboarding_optional": { "message": "необязательно" },
-  "app_onboarding_email_placeholder": { "message": "you@example.com" },
-  "app_onboarding_comment_label": { "message": "Комментарий" },
-  "app_onboarding_comment_placeholder": {
-    "message": "например, рабочий, личный"
-  },
-  "app_onboarding_advanced_options": { "message": "Дополнительные параметры" },
-  "app_onboarding_algorithm_label": { "message": "Алгоритм" },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "Современные, быстрые, компактные ключи. Рекомендуется для большинства случаев."
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "Широко совместим, но медленнее, и в его реализации RSA есть известный канал утечки по времени (Marvin). Выбирайте ECC, если RSA не нужен."
-  },
-  "app_onboarding_expiry_label": { "message": "Срок действия ключа" },
-  "app_onboarding_expiry_never": { "message": "Бессрочно" },
-  "app_onboarding_expiry_years_one": { "message": "$count$ год" },
-  "app_onboarding_expiry_years_few": { "message": "$count$ года" },
-  "app_onboarding_expiry_years_many": { "message": "$count$ лет" },
-  "app_onboarding_expiry_years_other": { "message": "$count$ года" },
   "app_onboarding_create_key": { "message": "Создать мой PGP-ключ" },
   "app_onboarding_skip": { "message": "Настрою позже" },
   "app_onboarding_passkey_prompt": {
@@ -184,9 +161,6 @@
   },
   "app_error_key_revoked": {
     "message": "Один из ключей, участвующих в операции, отозван владельцем. Получите у него новый ключ и импортируйте его."
-  },
-  "app_error_weak_algorithm": {
-    "message": "Этот ключ использует алгоритм подписи, который больше не считается безопасным. Попросите владельца ключа перевыпустить его с SHA-256 или более стойким алгоритмом."
   },
   "app_error_corrupted": {
     "message": "Данные повреждены или обрезаны. Получите полную свежую копию и повторите попытку."

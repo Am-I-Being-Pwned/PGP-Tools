@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 /**
- * Where PGP Tools places in Chrome Web Store search, for a list of targets.
+ * Where PGP Tools places in Chrome Web Store search. Anonymous search is
+ * deterministic; only the server-rendered first page is read, so a miss means
+ * "not in the top ~10".
  *
- * Store search is deterministic for anonymous queries -- the same query returns
- * the same results -- so this is a baseline rather than a sample. It reads the
- * server-rendered SERP, which is the first page only, so a miss means "not in
- * the top ~10", not "not ranked at all".
- *
- *   node scripts/cws-rank.mjs                    # the tracked list
- *   node scripts/cws-rank.mjs "gpg" "openpgp"    # ad-hoc
+ *   node scripts/cws-rank.mjs ["query" ...]
  */
 const EXTENSION_ID = "pgpcdgggohpbombhkffjoiiafdlfcpgp";
 const UA =
@@ -16,14 +12,36 @@ const UA =
   "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
 const KEYWORDS = [
-  "pgp", "pgp tools", "gpg", "openpgp", "gnupg",
-  "encrypt", "decrypt", "encryption", "encrypt message", "encrypt text",
-  "message encryption", "pgp encryption", "pgp key", "public key", "key manager",
-  "email encryption", "encrypted email", "email security", "encrypt email",
-  "digital signature", "verify signature", "sign message",
-  "file encryption", "encrypt file",
-  "encrypted messaging", "private messaging", "secure messaging", "secure chat",
-  "privacy tools", "cryptography",
+  "pgp",
+  "pgp tools",
+  "gpg",
+  "openpgp",
+  "gnupg",
+  "encrypt",
+  "decrypt",
+  "encryption",
+  "encrypt message",
+  "encrypt text",
+  "message encryption",
+  "pgp encryption",
+  "pgp key",
+  "public key",
+  "key manager",
+  "email encryption",
+  "encrypted email",
+  "email security",
+  "encrypt email",
+  "digital signature",
+  "verify signature",
+  "sign message",
+  "file encryption",
+  "encrypt file",
+  "encrypted messaging",
+  "private messaging",
+  "secure messaging",
+  "secure chat",
+  "privacy tools",
+  "cryptography",
 ];
 
 const ID_RE = /^[a-p]{32}$/;
@@ -88,7 +106,9 @@ for (const query of queries) {
   console.log(
     `${query.padEnd(24)} n=${String(rows.length).padEnd(3)} us=${String(
       ours === -1 ? "-" : ours + 1,
-    ).padEnd(4)} | #1 ${String(top?.[2] ?? "-").slice(0, 38).padEnd(38)} ${top?.[14] ?? ""}`,
+    ).padEnd(4)} | #1 ${String(top?.[2] ?? "-")
+      .slice(0, 38)
+      .padEnd(38)} ${top?.[14] ?? ""}`,
   );
   await new Promise((r) => setTimeout(r, 1100));
 }

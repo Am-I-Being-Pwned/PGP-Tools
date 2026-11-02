@@ -1,38 +1,25 @@
 import type * as React from "react";
 import { useRef } from "react";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 export interface SegmentedOption<T extends string> {
   value: T;
   label: React.ReactNode;
-  /** Accessible name when `label` is not plain text (an icon). */
+  /** When `label` is not plain text. */
   ariaLabel?: string;
-  /** `aria-keyshortcuts` for this option (the binding is the caller's). */
   ariaKeyShortcuts?: string;
-  /** A small hint shown above the segment on hover / keyboard focus
-   *  (e.g. its shortcut keycaps). Plain CSS, not a popover layer: a
-   *  layer would claim Escape and stray keystrokes while the pointer
-   *  merely rests on the control. Decorative -- put anything a screen
-   *  reader needs in `ariaLabel` / `ariaKeyShortcuts`. */
+  /** Plain CSS, not a popover layer: a layer would claim Escape and stray
+   *  keystrokes while the pointer merely rests. Decorative. */
   hint?: React.ReactNode;
-  /** Centred under the segment by default. "start" / "end" line it up
-   *  with the segment's outer edge instead, for an end segment narrower
-   *  than its hint (it would otherwise hang off the container). */
+  /** "start"/"end" for an end segment narrower than its hint. */
   hintAlign?: "center" | "start" | "end";
   disabled?: boolean;
 }
 
 /**
- * Pick exactly one of a few options: a recessed track with the chosen
- * segment raised. A radio group underneath -- one tab stop, arrow keys
- * move between options -- so it reads to assistive tech as the single
- * choice it is.
- *
- * `activation="manual"` makes the arrows move focus only, with Space /
- * Enter / click choosing. Use it when choosing has consequences (the
- * workspace mode switch resets a finished result): arrowing from
- * Encrypt to Sign must not pass through, and act on, Decrypt.
+ * A radio group: one tab stop, arrows move. Use `activation="manual"` when
+ * choosing has consequences, so arrowing past an option never acts on it.
  */
 export function Segmented<T extends string>({
   value,
@@ -50,16 +37,12 @@ export function Segmented<T extends string>({
   onValueChange: (value: T) => void;
   options: readonly SegmentedOption<T>[];
   ariaLabel: string;
-  /** Stretch segments to equal widths across the container. */
   fill?: boolean;
   size?: "default" | "sm";
   activation?: "automatic" | "manual";
-  /** Where option hints appear. Below by default: above, they collide
-   *  with whatever header the control sits under. */
+  /** Below by default: above collides with the header. */
   hintSide?: "top" | "bottom";
-  /** Leave the whole control out of the Tab order (its options stay
-   *  clickable and arrow-navigable once focused). For a control with
-   *  its own keyboard shortcuts that Tab would otherwise stop on first. */
+  /** For a control with its own shortcuts that Tab would stop on first. */
   skipTab?: boolean;
   className?: string;
 }) {
@@ -70,8 +53,6 @@ export function Segmented<T extends string>({
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (enabled.length === 0) return;
-    // Manual activation steps from the focused segment, automatic from
-    // the chosen one (they are the same segment there).
     const focused = refs.current.findIndex((el) => el === e.target);
     const from =
       activation === "manual" && focused >= 0

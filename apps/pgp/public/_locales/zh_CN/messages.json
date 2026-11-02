@@ -547,9 +547,6 @@
   "app_error_vault_locked": {
     "message": "你的保险库已锁定，因此未作任何更改。请解锁后再运行一次。"
   },
-  "app_error_weak_algorithm": {
-    "message": "此密钥使用的签名算法已不再被认为安全。请让密钥所有者使用 SHA-256 或更强的算法重新签发。"
-  },
   "app_error_weak_password": {
     "message": "该密码太短。请至少使用 8 个字符。"
   },
@@ -603,57 +600,11 @@
   "app_nav_label": {
     "message": "主导航"
   },
-  "app_onboarding_advanced_options": {
-    "message": "高级选项"
-  },
-  "app_onboarding_algo_ecc_hint": {
-    "message": "现代、快速、密钥体积小。推荐大多数用途使用。"
-  },
-  "app_onboarding_algo_rsa_hint": {
-    "message": "兼容性好，但速度较慢，且其 RSA 实现存在已知的时序侧信道 (Marvin)。除非需要 RSA，否则请选择 ECC。"
-  },
-  "app_onboarding_algorithm_label": {
-    "message": "算法"
-  },
-  "app_onboarding_comment_label": {
-    "message": "备注"
-  },
-  "app_onboarding_comment_placeholder": {
-    "message": "例如：工作、个人"
-  },
   "app_onboarding_create_key": {
     "message": "创建我的 PGP 密钥"
   },
   "app_onboarding_create_passkey": {
     "message": "创建通行密钥"
-  },
-  "app_onboarding_email_label": {
-    "message": "电子邮件"
-  },
-  "app_onboarding_email_placeholder": {
-    "message": "you@example.com"
-  },
-  "app_onboarding_expiry_label": {
-    "message": "密钥有效期"
-  },
-  "app_onboarding_expiry_never": {
-    "message": "永不过期"
-  },
-  "app_onboarding_expiry_years_one": {
-    "message": "$count$ 年",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
-  "app_onboarding_expiry_years_other": {
-    "message": "$count$ 年",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
   },
   "app_onboarding_generate_failed": {
     "message": "密钥生成失败"
@@ -673,20 +624,11 @@
   "app_onboarding_keep_defaults": {
     "message": "保留默认设置"
   },
-  "app_onboarding_name_label": {
-    "message": "姓名 *"
-  },
-  "app_onboarding_name_placeholder": {
-    "message": "你的全名"
-  },
   "app_onboarding_name_required": {
     "message": "姓名为必填项。"
   },
   "app_onboarding_next": {
     "message": "下一步"
-  },
-  "app_onboarding_optional": {
-    "message": "可选"
   },
   "app_onboarding_passkey_prompt": {
     "message": "请按照浏览器的通行密钥提示操作…"
@@ -2567,12 +2509,6 @@
         "content": "$1"
       }
     }
-  },
-  "keys_contacts_heading_encrypted": {
-    "message": "联系人（已加密）"
-  },
-  "keys_contacts_locked": {
-    "message": "联系人已加密。请解锁 PGP Tools 以查看和管理。"
   },
   "keys_contacts_removed_one": {
     "message": "已移除联系人"

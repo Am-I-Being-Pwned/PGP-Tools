@@ -7,7 +7,7 @@ import {
 } from "@radix-ui/react-icons";
 import { Select as SelectPrimitive } from "radix-ui";
 
-import { cn } from "@amibeingpwned/ui";
+import { cn } from "./cn";
 
 const Select = SelectPrimitive.Root;
 const SelectGroup = SelectPrimitive.Group;
@@ -120,9 +120,7 @@ function SelectItem({
   trailing,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item> & {
-  /** Decorative content rendered after the item text (e.g. a shortcut
-   *  hint). Kept outside ItemText so it never leaks into the trigger's
-   *  SelectValue. */
+  /** Outside ItemText so it never leaks into the trigger's SelectValue. */
   trailing?: React.ReactNode;
 }) {
   return (
