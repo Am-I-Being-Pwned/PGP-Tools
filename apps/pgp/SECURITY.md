@@ -1041,7 +1041,8 @@ grep -rnE 'console\.[a-z]+\(' apps/pgp --include='*.ts' --include='*.tsx' \
 #    brand the store's add requires, and is called only from
 #    lib/import/review.ts (applyReview) and the undo-delete in
 #    components/keys/DeletePages.tsx. The store itself is written only
-#    from lib/storage/contacts.ts and hooks/useContacts.ts.
+#    from lib/storage/contacts.ts, hooks/useContacts.ts and the legacy
+#    backfill in lib/storage/contact-backfill.ts.
 grep -rnE '\breviewed\(' apps/pgp --include='*.ts' --include='*.tsx' \
   | grep -vE '\.(test|spec)\.tsx?:|lib/import/review\.ts|keys/DeletePages\.tsx'
 # → empty.
