@@ -333,7 +333,7 @@ async function ensureUnlocked(
     }
     return c.getKeyHandle(keyId) ?? NONE;
   }
-  return { kind: "prompt", prompt: "key" };
+  return { kind: "prompt", prompt: "key", keyId };
 }
 
 /** Signing may go ahead, or the hidden-characters strip goes up. */

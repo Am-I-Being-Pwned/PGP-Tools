@@ -489,7 +489,7 @@ export function useWorkspace(opts: {
         signCrx(runContext(), crxKey, prompt.value),
       );
     }
-    const keyId = selectedKeyId ?? myKeys.at(0)?.keyId;
+    const keyId = prompt.keyId ?? selectedKeyId ?? myKeys.at(0)?.keyId;
     const blob = myKeys.find((k) => k.keyId === keyId);
     if (!blob) return;
     dispatch({ type: "submitted" });

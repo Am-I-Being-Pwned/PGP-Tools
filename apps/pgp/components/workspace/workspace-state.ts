@@ -95,6 +95,9 @@ export type PromptKind = "key" | "message" | "crx";
 
 export interface Prompt {
   kind: PromptKind;
+  /** The key a "key" prompt unlocks: the one the run asked for, which
+   *  for a signed encrypt need not be the selected key. */
+  keyId?: string;
   value: string;
   error: string | null;
 }
@@ -107,7 +110,7 @@ export type Outcome =
       spentPassword?: boolean;
     } & Partial<RunResult>)
   | { kind: "error"; error: PresentedError }
-  | { kind: "prompt"; prompt: PromptKind }
+  | { kind: "prompt"; prompt: PromptKind; keyId?: string }
   /** The secret just typed was wrong: said under the prompt, which stays. */
   | { kind: "rejected"; message: string }
   | { kind: "held-back" }
@@ -296,7 +299,12 @@ function finish(s: WorkspaceState, outcome: Outcome): WorkspaceState {
     case "prompt":
       return {
         ...idle,
-        prompt: { kind: outcome.prompt, value: "", error: null },
+        prompt: {
+          kind: outcome.prompt,
+          keyId: outcome.keyId,
+          value: "",
+          error: null,
+        },
       };
     case "rejected":
       return s.prompt
