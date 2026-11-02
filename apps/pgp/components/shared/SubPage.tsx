@@ -3,10 +3,9 @@ import { useState } from "react";
 import type { ShortcutSpec } from "@amibeingpwned/ui/kbd-helpers";
 import { Button } from "@amibeingpwned/ui/button";
 
-import type { PresentedError } from "../../lib/errors/present";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useDelayedFlag } from "../../hooks/useDelayedFlag";
 import { useShortcut } from "../../hooks/useShortcut";
-import { presentError } from "../../lib/errors/present";
 import { t } from "../../lib/i18n";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 
@@ -64,16 +63,10 @@ interface SubPageProps {
 }
 
 /**
- * The app's one modal surface: a full-screen slide-over subpage with a
- * back-arrow header, a scrollable body, and an optional footer of
- * stacked action buttons. Anything that used to be a Dialog renders as
- * one of these — pushed on a nav stack (KeysView) or mounted
- * conditionally (Settings, lock screen).
- *
- * Footer actions get shared busy handling: while one onClick is in
- * flight every footer button disables, the running one shows its
- * `busyText`, and a rejection surfaces as an error line above the
- * footer (the page stays open).
+ * The app's one modal surface: a full-screen slide-over with a back-arrow
+ * header, a scrollable body, and an optional footer of stacked actions.
+ * While one footer onClick is in flight every footer button disables;
+ * a rejection shows above the footer and the page stays open.
  */
 export function SubPage({
   title,
@@ -85,7 +78,8 @@ export function SubPage({
 }: SubPageProps) {
   const { entered, close, isTop } = useSlideOver(onClose);
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
-  const [error, setError] = useState<PresentedError | null>(null);
+  const footer = useAsyncAction(t("shared_something_went_wrong"));
+  const error = footer.error;
   const [showDetail, setShowDetail] = useState(false);
 
   const busy = busyIndex !== null;
@@ -95,24 +89,21 @@ export function SubPage({
 
   const runAction = (index: number) => {
     const action = actions?.[index];
-    if (!action || busy || action.disabled) return;
+    if (!action || footer.inFlight || action.disabled) return;
     if (!action.onClick) {
       close();
       return;
     }
-    setError(null);
     setShowDetail(false);
-    setBusyIndex(index);
-    void (async () => {
+    void footer.run(async () => {
+      setBusyIndex(index);
       try {
         await action.onClick?.(api);
         if (action.closeOnSuccess) close();
-      } catch (e) {
-        setError(presentError(e, t("shared_something_went_wrong")));
       } finally {
         setBusyIndex(null);
       }
-    })();
+    });
   };
 
   const api: SubPageApi = { close, busy, runAction };

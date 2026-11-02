@@ -11,6 +11,7 @@ import type {
   PgpPreferences,
   StorageLocation,
 } from "../../lib/storage/preferences";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useContacts } from "../../hooks/useContacts";
 import { useCrxKeys } from "../../hooks/useCrxKeys";
 import { useKeyring } from "../../hooks/useKeyring";
@@ -32,6 +33,7 @@ import { preferencesStore } from "../../lib/storage/preferences-store";
 import { refreshVaultLists } from "../../lib/storage/vault-lists";
 import { moveVault } from "../../lib/storage/vault-state";
 import { toast } from "../../lib/toast";
+import { errorMessage } from "../../lib/utils/errors";
 import { formatFileSize } from "../../lib/utils/formatting";
 import { ExportKeysPage } from "../keys/ExportKeysPage";
 import { CrxSigningInfoPage } from "../settings/CrxSigningInfoPage";
@@ -132,8 +134,11 @@ export function SettingsView() {
     aiTranslateEnabled,
     translationTargetLanguage,
   } = prefs;
-  const [migratingTo, setMigratingTo] = useState<StorageLocation | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const migration = useAsyncAction((e) => ({
+    message: isQuotaExceeded(e)
+      ? t("shared_sync_quota_error")
+      : errorMessage(e, t("shared_migration_failed")),
+  }));
   const [showExportAll, setShowExportAll] = useState(false);
   const [showImportAll, setShowImportAll] = useState(false);
   const [showCrxInfo, setShowCrxInfo] = useState(false);
@@ -157,27 +162,14 @@ export function SettingsView() {
 
   const currentPreset = activePreset(prefs);
 
+  // Ordering and rollback live in `moveVault`.
   const handleStorageChange = async (next: StorageLocation) => {
     if (next === storageLocation) return;
-    setMigratingTo(next);
-    setError(null);
-    // The copy / commit / purge sequence, its ordering and its rollback
-    // live in `moveVault` (lib/storage/vault-state.ts).
-    try {
+    await migration.run(async () => {
       await moveVault(storageLocation, next);
       await preferencesStore.reload();
       void onVaultMoved();
-    } catch (e) {
-      setError(
-        isQuotaExceeded(e)
-          ? t("shared_sync_quota_error")
-          : e instanceof Error
-            ? e.message
-            : t("shared_migration_failed"),
-      );
-    } finally {
-      setMigratingTo(null);
-    }
+    });
   };
 
   // Enter never-cache via the shared transition (flip prefs + wipe
@@ -316,9 +308,11 @@ export function SettingsView() {
         <StorageLocationPicker
           value={storageLocation}
           onChange={handleStorageChange}
-          disabled={migratingTo !== null}
+          disabled={migration.busy}
         />
-        {error && <p className="text-bad px-1 text-xs">{error}</p>}
+        {migration.error && (
+          <p className="text-bad px-1 text-xs">{migration.error.message}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">

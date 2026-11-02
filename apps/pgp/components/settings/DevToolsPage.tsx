@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@amibeingpwned/ui/button";
 
+import { engineMessage, useAsyncAction } from "../../hooks/useAsyncAction";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import {
   clearAllStorage,
@@ -26,40 +27,37 @@ interface WasmInfo {
 export function DevToolsPage({ onClose }: { onClose: () => void }) {
   const [storageJson, setStorageJson] = useState<string | null>(null);
   const [wasm, setWasm] = useState<WasmInfo | null>(null);
-  const [loading, setLoading] = useState(false);
   const [restoreName, setRestoreName] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const loader = useAsyncAction(engineMessage("Dev dump failed"));
+  const writer = useAsyncAction(engineMessage("Storage write failed"));
+  const loading = loader.busy;
+  const busy = writer.busy;
   const { copy } = useCopyToClipboard();
 
+  const load = async () => {
+    const [dump, pong, sessionActive] = await Promise.all([
+      dumpAllStorage(),
+      ping(),
+      hasContactsSession(),
+    ]);
+    setStorageJson(JSON.stringify(dump, null, 2));
+    // Size only; the download button re-reads the bytes.
+    setWasm({
+      pong,
+      sessionActive,
+      memoryBytes: dumpWasmMemoryForDev()?.byteLength ?? null,
+    });
+  };
+
+  // Stable toast ids: a retried failure updates in place.
   const refresh = async () => {
-    setLoading(true);
-    try {
-      const [dump, pong, sessionActive] = await Promise.all([
-        dumpAllStorage(),
-        ping(),
-        hasContactsSession(),
-      ]);
-      setStorageJson(JSON.stringify(dump, null, 2));
-      // Read the memory snapshot only for its size here; the full bytes
-      // are re-read on demand by the download button.
-      setWasm({
-        pong,
-        sessionActive,
-        memoryBytes: dumpWasmMemoryForDev()?.byteLength ?? null,
-      });
-    } catch (e) {
-      // Stable ids on the dev-tool errors: retrying a failing action
-      // updates the toast instead of stacking duplicates.
-      toast.error(e instanceof Error ? e.message : "Dev dump failed", {
-        id: "dev-dump-failed",
-      });
-    } finally {
-      setLoading(false);
-    }
+    const error = await loader.run(load);
+    if (error) toast.error(error.message, { id: "dev-dump-failed" });
   };
 
   useEffect(() => {
     void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on open
   }, []);
 
   const stamp = () =>
@@ -86,9 +84,8 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
 
   const handleRestoreFile = async (file: File | undefined) => {
     if (!file) return;
-    setBusy(true);
-    setRestoreName(file.name);
-    try {
+    const error = await writer.run(async () => {
+      setRestoreName(file.name);
       const parsed: unknown = JSON.parse(await file.text());
       if (!isStorageDump(parsed)) {
         toast.error("Not a storage dump ({ local, sync, session }).", {
@@ -101,30 +98,19 @@ export function DevToolsPage({ onClose }: { onClose: () => void }) {
       toast.success("Storage restored. Reload the panel to apply", {
         id: "dev-restored",
       });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Restore failed", {
-        id: "dev-restore-failed",
-      });
-    } finally {
-      setBusy(false);
-    }
+    });
+    if (error) toast.error(error.message, { id: "dev-restore-failed" });
   };
 
   const handleClearAll = async () => {
-    setBusy(true);
-    try {
+    const error = await writer.run(async () => {
       await clearAllStorage();
       await refresh();
       toast.success("Storage cleared. Reload the panel to apply", {
         id: "dev-cleared",
       });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Clear failed", {
-        id: "dev-clear-failed",
-      });
-    } finally {
-      setBusy(false);
-    }
+    });
+    if (error) toast.error(error.message, { id: "dev-clear-failed" });
   };
 
   return (

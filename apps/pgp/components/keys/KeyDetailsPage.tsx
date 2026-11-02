@@ -28,7 +28,10 @@ import type {
 import type { ProtectedKeyBlob } from "../../lib/storage/keyring";
 import type { ComponentKeyRow } from "./key-facts";
 import type { KeyPreviewChip } from "./KeyPreviewBody";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { AppError } from "../../lib/errors/app-error";
+import { presentError } from "../../lib/errors/present";
 import { t } from "../../lib/i18n";
 import { formatDate } from "../../lib/i18n/format";
 import { contactClashes } from "../../lib/identity/binding";
@@ -45,7 +48,6 @@ import {
 import { isSshRecord } from "../../lib/storage/key-kind";
 import { toast } from "../../lib/toast";
 import { downloadText } from "../../lib/utils/download";
-import { errorMessage } from "../../lib/utils/errors";
 import { parseUserId } from "../../lib/utils/key-naming";
 import { MarkedText } from "../shared/MarkedText";
 import {
@@ -143,8 +145,13 @@ function RevocationSection({
   onGenerate?: () => Promise<string>;
 }) {
   const [certificate, setCertificate] = useState(initialCertificate ?? null);
-  const [generating, setGenerating] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
+  // A locked key's message is ours and actionable; engine failures stay
+  // generic.
+  const generate = useAsyncAction((e) =>
+    e instanceof AppError && e.code === "key-locked"
+      ? { message: e.message }
+      : presentError(e, t("keys_revocation_create_failed")),
+  );
 
   const handleDownload = () => {
     if (!certificate) return;
@@ -163,21 +170,14 @@ function RevocationSection({
     });
   };
 
-  const handleGenerate = async () => {
-    if (!onGenerate) return;
-    setGenerating(true);
-    setGenError(null);
-    try {
+  const handleGenerate = () =>
+    generate.run(async () => {
+      if (!onGenerate) return;
       setCertificate(await onGenerate());
       toast.success(t("keys_revocation_created"), {
         id: "revocation-created",
       });
-    } catch (e) {
-      setGenError(errorMessage(e, t("keys_revocation_create_failed")));
-    } finally {
-      setGenerating(false);
-    }
-  };
+    });
 
   return (
     <div>
@@ -205,15 +205,15 @@ function RevocationSection({
               variant="outline"
               size="sm"
               onClick={() => void handleGenerate()}
-              disabled={generating || !onGenerate}
+              disabled={generate.busy || !onGenerate}
             >
-              {generating
+              {generate.busy
                 ? t("keys_revocation_creating")
                 : t("keys_revocation_create")}
             </Button>
-            {genError && (
+            {generate.error && (
               <p className="text-destructive text-xs" role="alert">
-                {genError}
+                {generate.error.message}
               </p>
             )}
           </>
@@ -281,16 +281,10 @@ function VerifySection({
   verifiedAt?: number;
   onSetVerified: (verified: boolean) => Promise<void>;
 }) {
-  const [busy, setBusy] = useState(false);
+  const { run, busy } = useAsyncAction(t("keys_save_failed"));
   const set = async (next: boolean) => {
-    setBusy(true);
-    try {
-      await onSetVerified(next);
-    } catch (e) {
-      toast.error(errorMessage(e, t("keys_save_failed")));
-    } finally {
-      setBusy(false);
-    }
+    const error = await run(() => onSetVerified(next));
+    if (error) toast.error(error.message);
   };
   if (verified) {
     return (
@@ -562,7 +556,7 @@ export function KeyDetailsPage({
       await setContactRecipientDisabled(target.contact.keyId, keyId, disable);
     } catch (e) {
       setRecipients(previous);
-      toast.error(errorMessage(e, t("keys_save_failed")));
+      toast.error(presentError(e, t("keys_save_failed")).message);
     } finally {
       setSavingKeyId(null);
     }

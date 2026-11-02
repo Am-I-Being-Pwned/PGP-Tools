@@ -18,6 +18,7 @@ import { useNav } from "../../hooks/useNav";
 import { usePreferences } from "../../hooks/usePreferences";
 import { useVault } from "../../hooks/useVault";
 import { publicKeyDerToPem } from "../../lib/crx/types";
+import { AppError } from "../../lib/errors/app-error";
 import { presentError } from "../../lib/errors/present";
 import { t, tn } from "../../lib/i18n";
 import { contactClash, contactClashes } from "../../lib/identity/binding";
@@ -839,7 +840,10 @@ export function KeysView() {
                     ? async () => {
                         const handle = getKeyHandle(target.keyBlob.keyId);
                         if (handle === null) {
-                          throw new Error(t("keys_revocation_unlock_first"));
+                          throw new AppError(
+                            "key-locked",
+                            t("keys_revocation_unlock_first"),
+                          );
                         }
                         const armored =
                           await revocationCertificateWithHandle(handle);
