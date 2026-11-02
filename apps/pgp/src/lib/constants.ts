@@ -23,3 +23,7 @@ export const STORAGE_CRX_KEYS = "pgp_crx_keys";
 export const MENU_OPEN_IN_PGP = "pgp-open";
 
 export const SESSION_PENDING_OP = "pgp_pending_operation";
+
+/** The message box's DOM id: VaultGate focuses it from outside the
+ *  workspace, and the e2e suite selects it. */
+export const MESSAGE_INPUT_ID = "pgp-input";

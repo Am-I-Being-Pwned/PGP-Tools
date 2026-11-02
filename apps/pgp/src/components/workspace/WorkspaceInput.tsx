@@ -26,6 +26,7 @@ import {
   type Edit,
   type InlineStyle,
 } from "~/lib/compose/text-format";
+import { MESSAGE_INPUT_ID } from "~/lib/constants";
 import { t, tn } from "~/lib/i18n";
 import type { WorkspaceAction } from "~/lib/messages";
 import { ComposeToolbar, type ComposeTranslateProps } from "./ComposeToolbar";
@@ -370,7 +371,7 @@ export function WorkspaceInput({
               />
             )}
             <textarea
-              id="pgp-input"
+              id={MESSAGE_INPUT_ID}
               aria-label={t("workspace_message_input_aria")}
               ref={attachInput}
               onChange={(e) => {

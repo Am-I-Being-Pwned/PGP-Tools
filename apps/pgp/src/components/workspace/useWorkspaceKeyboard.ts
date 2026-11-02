@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useRef, type RefObject } from "react";
 
 import { hasOpenSlideOver } from "~/components/shared/SlideOver";
 import type { Mode } from "./workspace-state";
@@ -22,6 +22,7 @@ export function useWorkspaceKeyboard(o: {
   onClear: () => void;
   onResetMode: () => void;
   focusMessageBox: () => void;
+  inputElRef: RefObject<HTMLTextAreaElement | null>;
 }) {
   const lastEscapeAt = useRef(0);
   const lastClearAt = useRef(0);
@@ -74,11 +75,9 @@ export function useWorkspaceKeyboard(o: {
         return;
       }
     }
-    const box = document.getElementById("pgp-input");
+    const box = o.inputElRef.current;
     // Absent with files staged; a null offsetParent means another tab.
-    if (!(box instanceof HTMLTextAreaElement) || box.offsetParent === null) {
-      return;
-    }
+    if (!box?.offsetParent) return;
     // Focus during keydown; the browser inserts the char (IME stays native).
     box.focus();
     box.setSelectionRange(box.value.length, box.value.length);

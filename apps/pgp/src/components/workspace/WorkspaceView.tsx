@@ -239,10 +239,10 @@ export function WorkspaceView({
   const restoreCleared = ws.restoreClearUndo;
   /** Next tick: Radix restores focus to a closing popover's anchor first. */
   const focusMessageBox = () =>
-    setTimeout(() => document.getElementById("pgp-input")?.focus(), 0);
+    setTimeout(() => inputElRef.current?.focus(), 0);
   const focusFlowStart = () => {
     setTimeout(() => {
-      const input = document.getElementById("pgp-input");
+      const input = inputElRef.current;
       if (input) return input.focus();
       document
         .querySelector<HTMLElement>("[data-workspace-card]")
@@ -295,6 +295,7 @@ export function WorkspaceView({
     onClear: () => clear(t("workspace_cleared_toast")),
     onResetMode: () => dispatch({ type: "mode-reset" }),
     focusMessageBox,
+    inputElRef,
   });
 
   const { setEncryptToSelf, setAlsoSign, setSaveToHistory } =
