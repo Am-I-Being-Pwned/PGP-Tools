@@ -5,7 +5,7 @@ import { t, tn } from "./i18n";
  * only bound that is a fact (the renderer's real limit varies by device).
  * Files well below it can still OOM, and a failed `memory.grow` aborts the
  * engine and drops unlocked keys. Decompression bombs are stopped by the
- * output/input ratio in `decrypt_limit` (`gpg-wasm/src/lib.rs`).
+ * output/input ratio in `decrypt_limit` (`gpg-wasm/src/limits.rs`).
  */
 export const MAX_FILE_BYTES = 4 * 1024 * 1024 * 1024;
 

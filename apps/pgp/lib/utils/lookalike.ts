@@ -1,6 +1,6 @@
 /**
  * Mark the letters that make a word a lookalike. Same rule as the
- * engine's `mixes_scripts` (gpg-wasm/src/lib.rs): a word mixing scripts
+ * engine's `mixes_scripts` (gpg-wasm/src/sanitize.rs): a word mixing scripts
  * that imitate each other; letters outside its main script are marked.
  * Computed from the text, not the stored flag, so older contacts are
  * covered too.
@@ -20,7 +20,7 @@ export interface TextRun {
 /**
  * Characters that render as nothing (default-ignorables, Cf, controls,
  * line/paragraph separators, blank-cell symbols). Must match
- * `INVISIBLE_RANGES` in gpg-wasm/src/lib.rs; `lookalike.test.ts` holds
+ * `INVISIBLE_RANGES` in gpg-wasm/src/sanitize.rs; `lookalike.test.ts` holds
  * the two together.
  */
 export const INVISIBLE =

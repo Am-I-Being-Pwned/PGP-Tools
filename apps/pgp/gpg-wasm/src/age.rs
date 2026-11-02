@@ -833,7 +833,7 @@ pub fn unlock_ssh_identity_with_prf(
 }
 
 /// Re-seal an unlocked SSH identity under a NEW PRF output without the
-/// plaintext leaving WASM (twin of `lib.rs::reprotect_key_with_prf`). The
+/// plaintext leaving WASM (twin of `key_store.rs::reprotect_key_with_prf`). The
 /// AAD identity is re-derived from the stored key, never taken from JS, and
 /// returned as `{"keyId": ...}` before `[12 iv][ct]` so JS can refuse to
 /// overwrite a different keyring entry.

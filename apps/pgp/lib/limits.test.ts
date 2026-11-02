@@ -1,5 +1,5 @@
 /** File-size ceiling: a sanity bound, not the bomb guard (that is
- *  `decrypt_limit` in `gpg-wasm/src/lib.rs`). */
+ *  `decrypt_limit` in `gpg-wasm/src/limits.rs`). */
 
 import { describe, expect, it } from "vitest";
 

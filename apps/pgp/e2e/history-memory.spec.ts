@@ -168,7 +168,7 @@ test("a master lock leaves no decrypted history in the JS heap", async ({
 //
 // Each segment is now sealed for its own storage key as the domain: the
 // wasm side derives BOTH an HKDF subkey and the AAD from it (see
-// `gpg-wasm/src/lib.rs` `encrypt_store` and `lib/storage/envelope.ts`), so
+// `gpg-wasm/src/sessions.rs` `encrypt_store` and `lib/storage/envelope.ts`), so
 // moving an intact blob to any other key breaks its tag check. The two
 // attacks below must now FAIL, and each is paired with a positive control
 // so a passing assertion cannot be a dead code path.

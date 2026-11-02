@@ -1,5 +1,13 @@
 use super::*;
 
+use std::time::{Duration, SystemTime};
+
+use openpgp::cert::{CertBuilder, CipherSuite};
+use openpgp::parse::Parse;
+use openpgp::serialize::Serialize as _;
+use openpgp::serialize::SerializeInto as _;
+use openpgp::types::SymmetricAlgorithm;
+
 fn gen_test_key() -> String {
     let opts = r#"{"name":"Test User","email":"test@example.com","type":"ecc"}"#;
     generate_key(opts).unwrap()

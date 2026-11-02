@@ -2,10 +2,20 @@
 //! more than the cryptography does.
 
 use super::*;
+
+use std::io::Write;
+use std::time::{Duration, SystemTime};
+
+use openpgp::cert::{CertBuilder, CipherSuite, SubkeyRevocationBuilder, UserIDRevocationBuilder};
+use openpgp::crypto::SessionKey;
 use openpgp::packet::signature::SignatureBuilder;
 use openpgp::packet::UserID;
-use openpgp::parse::{PacketParser, PacketParserResult};
-use openpgp::types::{ReasonForRevocation, SignatureType};
+use openpgp::parse::{PacketParser, PacketParserResult, Parse};
+use openpgp::serialize::stream::{Armorer, Encryptor, LiteralWriter, Message, Signer};
+use openpgp::serialize::Serialize as _;
+use openpgp::serialize::SerializeInto as _;
+use openpgp::types::{ReasonForRevocation, SignatureType, SymmetricAlgorithm};
+use zeroize::Zeroizing;
 
 const DAY: Duration = Duration::from_secs(86_400);
 

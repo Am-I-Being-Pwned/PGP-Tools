@@ -153,7 +153,7 @@ describe("INVISIBLE and the engine's INVISIBLE_RANGES", () => {
   // Must match the Rust INVISIBLE_RANGES table, read from source: a
   // character in only one set slips past the other side.
   const source = readFileSync(
-    new URL("../../gpg-wasm/src/lib.rs", import.meta.url),
+    new URL("../../gpg-wasm/src/sanitize.rs", import.meta.url),
     "utf8",
   );
   const table = /const INVISIBLE_RANGES[^=]*=\s*&\[([\s\S]*?)\];/.exec(

@@ -1,6 +1,6 @@
 /**
  * Cross-language consistency of the AAD prefixes and HKDF info strings
- * (Rust in `gpg-wasm/src/{lib,crx,age}.rs`; TS doc-comment templates).
+ * (Rust in `gpg-wasm/src/{protect,sessions,crx,age}.rs`; TS doc-comment templates).
  * Drift is silent and total: every blob on disk fails its tag check. So
  * values are pinned to literals, and TS templates are compared to the
  * Rust constants. `gpg-wasm/src/**` is read, never written.
@@ -57,10 +57,12 @@ const EXPECTED = {
 
 describe("wasm AAD prefixes", () => {
   it("match the literals every stored blob was sealed under", () => {
-    expect(rustConst("lib.rs", "PASSWORD_AAD_PREFIX")).toBe(
+    expect(rustConst("protect.rs", "PASSWORD_AAD_PREFIX")).toBe(
       EXPECTED.pgpPassword,
     );
-    expect(rustConst("lib.rs", "PASSKEY_AAD_PREFIX")).toBe(EXPECTED.pgpPasskey);
+    expect(rustConst("protect.rs", "PASSKEY_AAD_PREFIX")).toBe(
+      EXPECTED.pgpPasskey,
+    );
     expect(rustConst("crx.rs", "CRX_PASSWORD_AAD_PREFIX")).toBe(
       EXPECTED.crxPassword,
     );
@@ -74,8 +76,10 @@ describe("wasm AAD prefixes", () => {
     expect(rustConst("age.rs", "SSH_PASSKEY_AAD_PREFIX")).toBe(
       EXPECTED.sshPasskey,
     );
-    expect(rustConst("lib.rs", "STORE_AAD_PREFIX")).toBe(EXPECTED.storeAad);
-    expect(rustConst("lib.rs", "STORE_SUBKEY_INFO_PREFIX")).toBe(
+    expect(rustConst("sessions.rs", "STORE_AAD_PREFIX")).toBe(
+      EXPECTED.storeAad,
+    );
+    expect(rustConst("sessions.rs", "STORE_SUBKEY_INFO_PREFIX")).toBe(
       EXPECTED.storeSubkeyInfo,
     );
   });
@@ -83,7 +87,9 @@ describe("wasm AAD prefixes", () => {
   it("keep the PRF HKDF info strings distinct per key type", () => {
     // Colliding info strings would let one ceremony derive the same AES
     // key for a PGP cert and a CRX key.
-    expect(rustConst("lib.rs", "PASSKEY_HKDF_INFO")).toBe(EXPECTED.pgpPrfInfo);
+    expect(rustConst("protect.rs", "PASSKEY_HKDF_INFO")).toBe(
+      EXPECTED.pgpPrfInfo,
+    );
     expect(rustConst("crx.rs", "CRX_PRF_HKDF_INFO")).toBe(EXPECTED.crxPrfInfo);
     expect(rustConst("age.rs", "SSH_PRF_HKDF_INFO")).toBe(EXPECTED.sshPrfInfo);
     const infos = [
@@ -122,7 +128,7 @@ describe("TypeScript-side documentation of the same prefixes", () => {
     expect(src).toContain("gpg-tools:{method}:{keyId}");
     for (const method of ["password", "passkey"] as const) {
       expect(`gpg-tools:{method}:`.replace("{method}", method)).toBe(
-        rustConst("lib.rs", `${method.toUpperCase()}_AAD_PREFIX`),
+        rustConst("protect.rs", `${method.toUpperCase()}_AAD_PREFIX`),
       );
     }
   });

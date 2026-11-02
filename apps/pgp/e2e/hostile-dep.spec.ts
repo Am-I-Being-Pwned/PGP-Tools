@@ -32,7 +32,7 @@ import { PRIVATE_KEY_FIXTURE } from "./private-key";
  *     A fresh instantiation would have an empty KEY_STORE and be harmless;
  *     this is not a fresh instantiation.
  *   - `KEY_STORE` handles are a sequential `u32` from a counter starting at
- *     1 (`next_handle`, gpg-wasm/src/lib.rs), so there is nothing to guess.
+ *     1 (`next_handle`, gpg-wasm/src/key_store.rs), so there is nothing to guess.
  *   - The "type EXPORT to confirm" gate is UI, and UI is not a boundary
  *     against code running in the same realm.
  *
