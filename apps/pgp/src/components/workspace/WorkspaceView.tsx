@@ -1,11 +1,4 @@
-import {
-  use,
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-} from "react";
+import { use, useCallback, useEffect, useRef } from "react";
 import { ArrowLeftIcon, ReplyIcon } from "lucide-react";
 
 import {
@@ -20,12 +13,9 @@ import {
 import { HoverHint } from "~/components/shared/HoverHint";
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import {
-  useCopyToClipboard,
   useDelayedFlag,
   useNav,
   usePreferences,
-  useShortcut,
-  useVault,
   WorkspaceBridgeContext,
   type WorkspaceCommands,
   type WorkspaceSnapshot,
@@ -41,8 +31,6 @@ import { t } from "~/lib/i18n";
 import type { WorkspaceAction } from "~/lib/messages";
 import type { ReaderSigner } from "~/lib/reader-protocol";
 import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
-import { toast } from "~/lib/toast";
-import { saveCrxViaPrompt } from "~/lib/utils/download";
 import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
 import type { WorkspaceDraftSource } from "~/lib/workspace-draft";
 import { KeySelector } from "./KeySelector";
@@ -50,9 +38,11 @@ import { MessagePasswordPage } from "./MessagePasswordPage";
 import { selectionEngine } from "./recipient-engine";
 import { RecipientPicker } from "./RecipientPicker";
 import { ResultActions } from "./ResultActions";
-import { displayOnlySignerCard, signerCardState } from "./signer-card";
 import { TranslateToggle, TranslationNote } from "./TranslationPanel";
 import { useAutoRun } from "./useAutoRun";
+import { useClearWithUndo } from "./useClearWithUndo";
+import { useResultActions } from "./useResultActions";
+import { useSignerRecheck } from "./useSignerRecheck";
 import { useWorkspace, type WorkspaceIntake } from "./useWorkspace";
 import { useWorkspaceKeyboard } from "./useWorkspaceKeyboard";
 import { useWorkspaceTranslation } from "./useWorkspaceTranslation";
@@ -107,10 +97,8 @@ export function WorkspaceView({
     onIntakeConsumed,
   });
   const { state: s, dispatch, myKeys, contacts } = ws;
-  const { session } = useVault();
   const { openImport, showTab } = useNav();
   const {
-    keyDiscoveryEnabled,
     crxSigningEnabled,
     defaultKeyId,
     aiTranslateEnabled,
@@ -131,7 +119,6 @@ export function WorkspaceView({
     crxSigningEnabled,
   });
   const { prompt } = s;
-  const { verdict } = s.result;
   const resetResults = () => dispatch({ type: "reset-results" });
   const resetAll = () => dispatch({ type: "reset-all" });
   const setMode = (mode: Mode) => dispatch({ type: "mode-picked", mode });
@@ -151,55 +138,9 @@ export function WorkspaceView({
     done: v.done,
     hasOutputText: v.hasOutputText,
   });
-  const { inputElRef, inputChanged } = ws;
+  const { inputElRef } = ws;
 
   const showLoadingLabel = useDelayedFlag(v.loading);
-
-  // Save-As is the one download Chrome doesn't route to the CRX installer.
-  const saveCrx = async () => {
-    if (!v.crxResult) return;
-    const result = await saveCrxViaPrompt(v.crxResult.data, v.crxResult.name);
-    dispatch({
-      type: "status",
-      text:
-        result === "saved"
-          ? t("workspace_crx_saved", { name: v.crxResult.name })
-          : result === "cancelled"
-            ? null
-            : t("workspace_crx_save_failed"),
-    });
-  };
-  const autoSaveCrx = useEffectEvent(() => void saveCrx());
-  const crxData = v.crxResult?.data;
-  useEffect(() => {
-    if (crxData) autoSaveCrx();
-  }, [crxData]);
-  /** The reset wipes the output: the panel keeps no copy. */
-  const openReply = () => {
-    if (!v.replyTo || !onOpenReply) return;
-    // Display-only card: no public key travels to the tab.
-    const signer = displayOnlySignerCard(
-      signerCardState({
-        signer: v.replyTo.signer,
-        tone: v.replyTo.tone,
-        note: v.replyTo.note,
-        caveat: v.replyTo.caveat,
-        statusText: s.result.status ?? undefined,
-        contacts,
-        myKeys,
-      }),
-    );
-    void onOpenReply(ws.getOutput(), signer)
-      .then(() => {
-        resetAll();
-        dispatch({ type: "encrypt-to", keyId: signer.contact.keyId });
-        requestAnimationFrame(() => {
-          window.focus();
-          inputElRef.current?.focus();
-        });
-      })
-      .catch(() => toast.error(t("workspace_reply_failed")));
-  };
 
   const selectedRecipientKeys = resolveSelectedRecipients(
     s.recipientIds,
@@ -234,58 +175,17 @@ export function WorkspaceView({
         }).selfExcluded
       : false;
 
-  // The undo snapshot lives in a wipeable ref, never a toast closure: sonner
-  // keeps action callbacks alive past a master lock.
-  const restoreCleared = ws.restoreClearUndo;
-  /** Next tick: Radix restores focus to a closing popover's anchor first. */
-  const focusMessageBox = () =>
-    setTimeout(() => inputElRef.current?.focus(), 0);
-  const focusFlowStart = () => {
-    setTimeout(() => {
-      const input = inputElRef.current;
-      if (input) return input.focus();
-      document
-        .querySelector<HTMLElement>("[data-workspace-card]")
-        ?.querySelector<HTMLElement>(
-          [
-            '[role="combobox"]',
-            'input:not([type="file"]):not([disabled])',
-            "textarea:not([disabled])",
-            "select:not([disabled])",
-            "button:not([disabled]):not([tabindex='-1'])",
-          ].join(","),
-        )
-        ?.focus();
-    }, 0);
-  };
-  const resetAndRefocus = () => {
-    resetAll();
-    focusFlowStart();
-  };
-  const clear = (toastMessage: string | null, textOnly = false) => {
-    ws.stashClearUndo();
-    if (textOnly) inputChanged("");
-    else resetAll();
-    if (toastMessage) {
-      toast.message(toastMessage, {
-        id: "workspace-text-cleared",
-        duration: 4000,
-        action: { label: t("workspace_undo"), onClick: restoreCleared },
-      });
-    }
-    focusFlowStart();
-  };
   const hasStaged =
     s.input.len > 0 || s.files.length > 0 || s.recipientIds.length > 0;
-  const clearText = () =>
-    clear(
-      v.done ? null : t("workspace_text_cleared_toast"),
-      s.files.length > 0,
-    );
+  const { focusMessageBox, clear, clearText, resetAndRefocus } =
+    useClearWithUndo(ws, v);
+  const { copied, handleCopy, saveCrx, openReply } = useResultActions(
+    ws,
+    v,
+    onOpenReply,
+  );
+  const lookupSigner = useSignerRecheck(ws, v);
 
-  useShortcut({ mod: true, key: "z" }, restoreCleared, {
-    enabled: s.clearUndo && s.input.len === 0,
-  });
   useWorkspaceKeyboard({
     mode: s.mode,
     showFullOutput: v.showFullOutput,
@@ -301,15 +201,6 @@ export function WorkspaceView({
   const { setEncryptToSelf, setAlsoSign, setSaveToHistory } =
     useEncryptToggles(ws);
 
-  const [copied, setCopied] = useState(false);
-  const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const { copy } = useCopyToClipboard();
-  const handleCopy = async () => {
-    if (!(await copy(ws.getOutput()))) return;
-    setCopied(true);
-    clearTimeout(copyTimer.current);
-    copyTimer.current = setTimeout(() => setCopied(false), 2000);
-  };
   const runMain = () => {
     if (v.done && s.mode === "verify") resetAll();
     else void ws.execute();
@@ -324,36 +215,6 @@ export function WorkspaceView({
           pendingAction.action === "verify")),
     canRun: v.canRun,
   });
-
-  // Re-verify a looked-up unknown signer once contacts change; never prompts.
-  const lookedUp = useRef<{ keyId: string; contacts: unknown } | null>(null);
-  const lookupSigner = keyDiscoveryEnabled
-    ? (keyId: string) => {
-        lookedUp.current = { keyId, contacts };
-        openImport({ lookup: keyId });
-      }
-    : undefined;
-  const recheckSigner = useEffectEvent(() => {
-    const pending = lookedUp.current;
-    if (!pending || pending.contacts === contacts) return;
-    lookedUp.current = null;
-    if (v.loading || verdict?.tone !== "warning") return;
-    if (verdict.signer.keyId !== pending.keyId) return;
-    if (s.mode === "verify") {
-      void ws.execute();
-    } else if (
-      s.mode === "decrypt" &&
-      (v.unencryptedMessage ||
-        (!v.passwordOnlyMessage &&
-          ws.selectedKeyId !== null &&
-          session.getKeyHandle(ws.selectedKeyId) !== null))
-    ) {
-      void ws.executeWithoutPrompts();
-    }
-  });
-  useEffect(() => {
-    recheckSigner();
-  }, [contacts]);
 
   const bridge = use(WorkspaceBridgeContext);
   const commands: WorkspaceCommands = {
