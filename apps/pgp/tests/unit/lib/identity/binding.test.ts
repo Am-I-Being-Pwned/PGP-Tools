@@ -644,6 +644,8 @@ describe("contactClashes: performance", () => {
     expect(clashes.get("F".repeat(40))?.kind).toBe("name");
     expect(clashes.get("D".repeat(40))?.kind).toBe("address");
     expect(clashes.has("E".repeat(40))).toBe(false);
-    expect(elapsed).toBeLessThan(500);
+    // A quadratic regression at this size takes seconds; the margin is
+    // for shared CI runners, where this has measured 550-600 ms.
+    expect(elapsed).toBeLessThan(1_000);
   });
 });

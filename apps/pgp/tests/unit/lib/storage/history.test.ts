@@ -789,5 +789,6 @@ describe("padding upgrade keeps a full history", () => {
     expect(await historyByteSize()).toBeLessThanOrEqual(2 * 1024 * 1024);
     // Every multi-entry segment stays inside the 64 KB bucket.
     expect(manifest().segs.every((s) => s.bytes <= 64 * 1024)).toBe(true);
-  });
+    // 700 sealed appends: past the 5 s default on a loaded CI runner.
+  }, 20_000);
 });
