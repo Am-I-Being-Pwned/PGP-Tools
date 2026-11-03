@@ -7,6 +7,7 @@ import type { PublicContactKey } from "~/lib/storage/contacts";
 import { recordHistory, type NewHistoryEntry } from "~/lib/storage/history";
 import { isPgpRecord, isSshRecord } from "~/lib/storage/key-kind";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { isContact } from "~/lib/storage/stored-key";
 import { toast } from "~/lib/toast";
 import {
   downloadBinary,
@@ -188,9 +189,7 @@ export function signatureVerdict(
     if (!signer) return { status: t("workspace_signature_verified") };
     // Whether the key IS the person it names only the user can vouch for.
     const unvouched =
-      "armoredPublicKey" in signer &&
-      !signer.verified &&
-      !myIds.includes(signer.keyId);
+      isContact(signer) && !signer.verified && !myIds.includes(signer.keyId);
     const note =
       [
         notEncrypted ? t("workspace_signed_not_encrypted") : null,
@@ -289,13 +288,10 @@ export function selectedRecipientKeys(c: RunContext) {
 }
 
 export function recipientNames(c: RunContext): string[] {
-  return c.recipientIds
-    .map((id) => [...c.myKeys, ...c.contacts].find((k) => k.keyId === id))
-    .filter((k) => k !== undefined)
-    .map((k) => {
-      const uid = k.userIds[0];
-      return uid ? formatKeyDisplayName(uid).name : k.keyId.slice(-8);
-    });
+  return selectedRecipientKeys(c).map((k) => {
+    const uid = k.userIds[0];
+    return uid ? formatKeyDisplayName(uid).name : k.keyId.slice(-8);
+  });
 }
 
 /** Staged files plus any written message as `msg.txt`. Built per run,

@@ -94,3 +94,5 @@ export function deriveWorkspaceView(
     hasDownload,
   };
 }
+
+export type WorkspaceFlags = ReturnType<typeof deriveWorkspaceView>;

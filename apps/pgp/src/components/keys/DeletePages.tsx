@@ -1,7 +1,5 @@
 import { ConfirmPage } from "~/components/shared/ConfirmPage";
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useVault } from "~/hooks/useVault";
+import { useContacts, useCrxKeys, useVault } from "~/hooks";
 import { t, tn } from "~/lib/i18n";
 import { reviewed } from "~/lib/import/review";
 import { toast } from "~/lib/toast";

@@ -6,12 +6,14 @@ import {
   useState,
 } from "react";
 
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  useContacts,
+  useCrxKeys,
+  useKeyring,
+  useNavIntent,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { recoverArmorIfNeeded } from "~/lib/armor-recovery";
 import { presentError } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";
@@ -50,11 +52,9 @@ import {
   type WorkspaceEvent,
 } from "./workspace-state";
 
-/** `nonce` re-triggers intake for the same files/text. */
 export interface WorkspaceIntake {
   files: File[];
   text: string;
-  nonce: number;
 }
 
 const PUBLIC_KEY_HEADER = "-----BEGIN PGP PUBLIC KEY BLOCK-----";
@@ -77,7 +77,6 @@ export function useWorkspace(opts: {
   const { contacts } = useContacts();
   const { keys: crxKeys } = useCrxKeys();
   const { session } = useVault();
-  const nav = useNav();
   const prefs = usePreferences();
 
   const [state, setState] = useState(initialWorkspaceState);
@@ -248,12 +247,9 @@ export function useWorkspace(opts: {
     onClearPending?.();
   }, [pendingAction, onClearPending, writeInput, dispatch]);
 
-  const { encryptToKeyId, consume } = nav;
-  useEffect(() => {
-    if (!encryptToKeyId) return;
-    dispatch({ type: "encrypt-to", keyId: encryptToKeyId });
-    consume("encryptToKeyId");
-  }, [encryptToKeyId, consume, dispatch]);
+  useNavIntent("encryptToKeyId", (keyId) =>
+    dispatch({ type: "encrypt-to", keyId }),
+  );
 
   useEffect(() => {
     if (!intake) return;

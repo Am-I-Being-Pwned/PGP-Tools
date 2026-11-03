@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { copyToClipboard } from "~/hooks/useCopyToClipboard";
+import { copyToClipboard } from "~/hooks";
 
 const toastMock = vi.hoisted(() => ({
   success: vi.fn(),

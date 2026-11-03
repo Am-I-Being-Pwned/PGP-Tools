@@ -10,7 +10,7 @@ import {
   Kbd,
 } from "@amibeingpwned/ui";
 
-import { useShortcut } from "~/hooks/useShortcut";
+import { useShortcut } from "~/hooks";
 import {
   ACTIONS,
   groupLabel,

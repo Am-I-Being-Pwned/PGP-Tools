@@ -1,10 +1,12 @@
 import { ImportKeyPage } from "~/components/keys/ImportKeyPage";
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  useContacts,
+  useCrxKeys,
+  useKeyring,
+  useNav,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { tn } from "~/lib/i18n";
 import { toast } from "~/lib/toast";
 

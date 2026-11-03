@@ -1,15 +1,17 @@
-import { useContacts } from "~/hooks/useContacts";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  useContacts,
+  useKeyring,
+  useNav,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { AppError } from "~/lib/errors/app-error";
 import { t } from "~/lib/i18n";
 import { contactClash } from "~/lib/identity/binding";
 import { revocationCertificateWithHandle } from "~/lib/pgp/wasm";
 import { isSshRecord } from "~/lib/storage/key-kind";
 import { KeyDetailsPage, type KeyDetailsTarget } from "./KeyDetailsPage";
-import type { KeysNav } from "./keys-routes";
+import { holderDetailsTarget, type KeysNav } from "./keys-routes";
 import { useContactRevocationCheck } from "./useContactRevocationCheck";
 
 /** KeyDetailsPage wired to the stores, for the keys subpage stack. */
@@ -59,14 +61,12 @@ export function KeyDetailsRoute({
           : undefined
       }
       onShowHolder={(holder) => {
-        const contact = contactStore.contacts.find(
-          (c) => c.keyId === holder.keyId,
+        const next = holderDetailsTarget(
+          holder.keyId,
+          contactStore.contacts,
+          keyring.keys,
         );
-        const own = keyring.keys.find((k) => k.keyId === holder.keyId);
-        if (contact)
-          nav.push({ page: "details", target: { kind: "contact", contact } });
-        else if (own)
-          nav.push({ page: "details", target: { kind: "own", keyBlob: own } });
+        if (next) nav.push({ page: "details", target: next });
       }}
       onSetVerified={
         target.kind === "contact" && !target.contact.revoked

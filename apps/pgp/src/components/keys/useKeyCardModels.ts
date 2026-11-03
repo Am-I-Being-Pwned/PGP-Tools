@@ -1,7 +1,9 @@
-import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
-import { useKeyring } from "~/hooks/useKeyring";
-import { usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  useCopyToClipboard,
+  useKeyring,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { publicKeyDerToPem, type CrxSigningKeyBlob } from "~/lib/crx/types";
 import { t } from "~/lib/i18n";
 import { downloadPublicKey } from "~/lib/keys/export-bundle";

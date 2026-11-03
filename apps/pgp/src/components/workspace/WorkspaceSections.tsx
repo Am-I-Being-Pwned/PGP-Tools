@@ -13,8 +13,7 @@ import {
 } from "@amibeingpwned/ui";
 
 import { ToggleBadge } from "~/components/shared/ToggleBadge";
-import { useNav } from "~/hooks/useNav";
-import { savePreference, usePreferences } from "~/hooks/usePreferences";
+import { savePreference, useNav, usePreferences } from "~/hooks";
 import { sshPasswordReason } from "~/lib/encrypt-recipients";
 import { t } from "~/lib/i18n";
 import { requestUnlimitedHistoryStorage } from "~/lib/storage/history";
@@ -24,12 +23,12 @@ import { withoutHiddenCharacters } from "./hidden-characters";
 import { KeySelector } from "./KeySelector";
 import type { selectionEngine } from "./recipient-engine";
 import { ResultActions } from "./ResultActions";
-import type { useWorkspace } from "./useWorkspace";
-import type { deriveWorkspaceView } from "./workspace-view";
+import type { Workspace } from "./useWorkspace";
+import type { WorkspaceFlags } from "./workspace-view";
 import { modeLabel } from "./WorkspaceInput";
 
-type Ws = ReturnType<typeof useWorkspace>;
-type View = ReturnType<typeof deriveWorkspaceView>;
+type Ws = Workspace;
+type View = WorkspaceFlags;
 type Engine = ReturnType<typeof selectionEngine>;
 
 /** mod+Enter mirrors the main action button. */
@@ -82,7 +81,7 @@ export function SignKeyPickers({
   signKeyChoices: ProtectedKeyBlob[];
   decryptKeyChoices: ProtectedKeyBlob[];
 }) {
-  const { state: s, dispatch, myKeys, contacts, crxKeys } = ws;
+  const { state: s, dispatch, crxKeys } = ws;
   const { showTab } = useNav();
   return (
     <>
@@ -115,8 +114,6 @@ export function SignKeyPickers({
           }
           keys={s.mode === "sign" ? signKeyChoices : decryptKeyChoices}
           selectedKeyId={ws.selectedKeyId}
-          detailsContacts={contacts}
-          detailsOwnKeys={myKeys}
           onSelect={ws.selectPrivateKey}
           emptyText={t("workspace_no_keys_yet")}
           emptyAction={() => showTab("keys")}

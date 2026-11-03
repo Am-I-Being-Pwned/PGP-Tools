@@ -1,7 +1,7 @@
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { HistoryIcon, SettingsIcon } from "lucide-react";
 
-import type { Tab } from "~/hooks/useNav";
+import type { Tab } from "~/hooks";
 import { t } from "~/lib/i18n";
 
 // Labels resolve at render time, never at module load.

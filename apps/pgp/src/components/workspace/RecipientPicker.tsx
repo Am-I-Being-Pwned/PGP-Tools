@@ -19,6 +19,7 @@ import { keyDetailsTarget } from "~/components/keys/KeyDetailsButton";
 import { KeyDetailsPage } from "~/components/keys/KeyDetailsPage";
 import { KeyAvatar } from "~/components/shared/KeyAvatar";
 import { MarkedText } from "~/components/shared/MarkedText";
+import { resolveSelectedRecipients } from "~/lib/encrypt-recipients";
 import { t, tn } from "~/lib/i18n";
 import {
   contactClashes,
@@ -37,6 +38,7 @@ import {
 } from "~/lib/storage/contacts";
 import { isSshRecord } from "~/lib/storage/key-kind";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import { isContact, type StoredKey } from "~/lib/storage/stored-key";
 import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
 import {
   pickableKeys,
@@ -44,8 +46,6 @@ import {
   selectionEngine,
   splitRecipientSections,
 } from "./recipient-engine";
-
-type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
 interface RecipientPickerProps {
   label: string;
@@ -67,7 +67,7 @@ interface RecipientPickerProps {
   inline?: boolean;
 }
 
-function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
+function getKeyDisplay(key: StoredKey): { name: string; detail: string } {
   const userId = displayUserId(key);
   if (!userId) return { name: key.keyId.slice(-8).toUpperCase(), detail: "" };
   return formatKeyDisplayName(userId);
@@ -101,7 +101,7 @@ export function RecipientPicker({
   // Controlled so it resets between opens; otherwise cmdk points at the
   // just-picked, now-absent item and Enter silently no-ops.
   const [highlighted, setHighlighted] = useState("");
-  const [detailsKey, setDetailsKey] = useState<AnyKey | null>(null);
+  const [detailsKey, setDetailsKey] = useState<StoredKey | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
@@ -159,7 +159,7 @@ export function RecipientPicker({
     [contacts, myKeys],
   );
 
-  const allKeys: AnyKey[] = [...contacts, ...myKeys];
+  const allKeys: StoredKey[] = [...contacts, ...myKeys];
 
   if (allKeys.length === 0) {
     return (
@@ -188,15 +188,12 @@ export function RecipientPicker({
     );
   }
 
-  // Own keys first: an id that is yours means your key, as in
-  // `resolveSelectedRecipients`.
-  const selectedKeys = selectedKeyIds
-    .map(
-      (id) =>
-        myKeys.find((k) => k.keyId === id) ??
-        contacts.find((k) => k.keyId === id),
-    )
-    .filter((k): k is AnyKey => k !== undefined);
+  // The encrypt's own resolution, so the picker shows what it will use.
+  const selectedKeys = resolveSelectedRecipients(
+    selectedKeyIds,
+    contacts,
+    myKeys,
+  );
 
   // Filtering is manual here (Command has shouldFilter={false}).
   const selectedSet = new Set(selectedKeyIds);
@@ -204,7 +201,7 @@ export function RecipientPicker({
     (k) => !selectedSet.has(k.keyId) && matchesRecipientSearch(k, search),
   );
   // By record, not fingerprint: one key can be both yours and a contact's.
-  const contactRecords = new Set<AnyKey>(contacts);
+  const contactRecords = new Set<StoredKey>(contacts);
   const { contacts: availableContacts, own: availableOwn } =
     splitRecipientSections<PublicContactKey, ProtectedKeyBlob>(
       available,
@@ -314,13 +311,13 @@ export function RecipientPicker({
   };
 
   /** The cmdk item value for a key -- must match renderOption's value. */
-  const itemValue = (key: AnyKey): string => {
+  const itemValue = (key: StoredKey): string => {
     const { name, detail } = getKeyDisplay(key);
     return detail ? `${name} ${detail} ${key.keyId}` : `${name} ${key.keyId}`;
   };
 
   /** Numbered off `pickable`, so shown digits are the ones that work. */
-  const digitFor = (key: AnyKey): number | null => {
+  const digitFor = (key: StoredKey): number | null => {
     if (search !== "") return null;
     const index = pickable.indexOf(key);
     return index >= 0 && index < 9 ? index + 1 : null;
@@ -332,16 +329,14 @@ export function RecipientPicker({
     (k) => recipientBlockReason(k, engine, passwordArmed) !== null,
   )?.keyId;
 
-  const renderOption = (key: AnyKey) => {
+  const renderOption = (key: StoredKey) => {
     const { name, detail } = getKeyDisplay(key);
     const digit = digitFor(key);
     const isOwn = !contactRecords.has(key);
     const isSsh = isSshRecord(key);
     // Picking a contact encrypts to ALL its active keys; say so up front.
-    const keyCount =
-      "armoredPublicKey" in key ? contactRecipients(key).length : 1;
-    const activeKeyCount =
-      "armoredPublicKey" in key ? activeRecipients(key).length : 1;
+    const keyCount = isContact(key) ? contactRecipients(key).length : 1;
+    const activeKeyCount = isContact(key) ? activeRecipients(key).length : 1;
     const blockReason = recipientBlockReason(key, engine, passwordArmed);
     const blocked = blockReason !== null;
     const verified = !isOwn && "verified" in key && key.verified === true;
@@ -669,8 +664,6 @@ export function RecipientPicker({
             setDetailsKey(null);
             refocusInput();
           }}
-          contacts={contacts}
-          ownKeys={myKeys}
         />
       )}
     </div>

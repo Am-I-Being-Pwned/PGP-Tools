@@ -42,3 +42,16 @@ export const LIST_STACK =
 /** Namespaced so PGP keys, CRX keys, and contacts share one selection set. */
 export const selId = (kind: "pgp" | "crx" | "contact", id: string) =>
   `${kind}:${id}`;
+
+/** A clash holder's details page: the contact if one holds the id, else
+ *  the user's own key. */
+export function holderDetailsTarget(
+  keyId: string,
+  contacts: readonly PublicContactKey[],
+  ownKeys: readonly ProtectedKeyBlob[],
+): KeyDetailsTarget | null {
+  const contact = contacts.find((c) => c.keyId === keyId);
+  if (contact) return { kind: "contact", contact };
+  const own = ownKeys.find((k) => k.keyId === keyId);
+  return own ? { kind: "own", keyBlob: own } : null;
+}

@@ -1,7 +1,7 @@
 import { LanguagesIcon, LoaderCircleIcon } from "lucide-react";
 
 import { HoverHint } from "~/components/shared/HoverHint";
-import type { TranslationStatus } from "~/hooks/useTranslation";
+import type { TranslationStatus } from "~/hooks";
 import { languageLabel } from "~/lib/ai/languages";
 import { t } from "~/lib/i18n";
 

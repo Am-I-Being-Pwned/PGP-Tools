@@ -51,6 +51,20 @@ const contactCard = (panel: Page, fingerprint: string) =>
 const choice = (row: Locator, label: string) =>
   row.getByRole("radio", { name: label, exact: true });
 
+/** Pick a review choice and confirm it took. The Review slides in over
+ *  300 ms; a click that lands mid-slide on a slow runner misses, so it is
+ *  retried until the radio reads checked (re-clicking a checked radio is a
+ *  no-op). */
+async function pick(row: Locator, label: string): Promise<void> {
+  const radio = choice(row, label);
+  await expect(async () => {
+    await radio.click();
+    await expect(radio).toHaveAttribute("aria-checked", "true", {
+      timeout: 1_000,
+    });
+  }).toPass();
+}
+
 async function storedFingerprints(panel: Page): Promise<string[]> {
   return (await readContacts(panel)).map((c) => c.keyId.toUpperCase()).sort();
 }
@@ -201,7 +215,7 @@ for (const how of ["file drop", "context menu"] as const) {
       importPage(panel).getByRole("button", { name: "Nothing selected" }),
     ).toBeDisabled();
 
-    await choice(row, "Keep both").click();
+    await pick(row, "Keep both");
     await reviewImportButton(panel, 1).click();
     await expect(importPage(panel)).toBeHidden();
 
@@ -237,7 +251,7 @@ for (const how of ["file drop", "context menu"] as const) {
       IMPOSTOR.publicKey,
     ]);
     const row = await expectAddressConflict(panel);
-    await choice(row, "Replace").click();
+    await pick(row, "Replace");
     expect(await storedFingerprints(panel)).toEqual([ALICE.fingerprint]);
     await reviewImportButton(panel, 1).click();
     await expect(importPage(panel)).toBeHidden();
@@ -378,7 +392,7 @@ test("a Cyrillic look-alike of a name is a name conflict with no Replace; the ve
   // three cards say so -- once each (the clash pill stands in for the
   // generic mixed-alphabet one).
   await dropContactsFile(panel, [LOOKALIKE.publicKey]);
-  await choice(reviewRow(panel, LOOKALIKE.fingerprint), "Keep both").click();
+  await pick(reviewRow(panel, LOOKALIKE.fingerprint), "Keep both");
   await reviewImportButton(panel, 1).click();
   await expect(importPage(panel)).toBeHidden();
   await goToKeys(panel);
@@ -548,7 +562,7 @@ test("a backup's private key is listed on the Review too, as the user's own, and
     .filter({ hasText: PRIVATE_KEY_FIXTURE.name });
   await expect(own).toContainText("Your key");
   await expect(choice(own, "Import")).toHaveAttribute("aria-checked", "true");
-  await choice(own, "Skip").click();
+  await pick(own, "Skip");
 
   // Only Bob is chosen: no unlock or protect step in between.
   await reviewImportButton(panel, 1).click();

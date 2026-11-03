@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { useNav } from "~/hooks/useNav";
+import { useNavIntent } from "~/hooks";
 
 /**
  * Key ids written by the most recent import (or a `highlightKeyIds`
@@ -11,7 +11,6 @@ export function useImportHighlight(): [
   Set<string>,
   (keyIds: string[]) => void,
 ] {
-  const appNav = useNav();
   const [justImported, setJustImported] = useState<Set<string>>(new Set());
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -24,12 +23,7 @@ export function useImportHighlight(): [
     timer.current = setTimeout(() => setJustImported(new Set()), 2600);
   };
 
-  useEffect(() => {
-    if (!appNav.highlightKeyIds?.length) return;
-    highlight(appNav.highlightKeyIds);
-    appNav.consume("highlightKeyIds");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appNav.highlightKeyIds]);
+  useNavIntent("highlightKeyIds", highlight);
 
   return [justImported, highlight];
 }

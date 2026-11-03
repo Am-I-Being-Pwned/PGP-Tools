@@ -22,13 +22,12 @@ import { MarkedText } from "~/components/shared/MarkedText";
 import { t } from "~/lib/i18n";
 import type { PublicContactKey } from "~/lib/storage/contacts";
 import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
+import type { StoredKey } from "~/lib/storage/stored-key";
 import { displayUserId, formatKeyDisplayName } from "~/lib/utils/key-naming";
-
-type AnyKey = ProtectedKeyBlob | PublicContactKey;
 
 interface KeySelectorProps {
   label: string;
-  keys?: AnyKey[];
+  keys?: StoredKey[];
   contacts?: PublicContactKey[];
   myKeys?: ProtectedKeyBlob[];
   selectedKeyId: string | null;
@@ -38,13 +37,9 @@ interface KeySelectorProps {
   emptyActionLabel?: string;
   /** Inside a card row (the From line): label becomes the accessible name. */
   inline?: boolean;
-  /** For the details page; separate from `contacts`/`myKeys`, which pick
-   *  what the LIST shows and are ignored when `keys` is set. */
-  detailsContacts?: readonly PublicContactKey[];
-  detailsOwnKeys?: readonly ProtectedKeyBlob[];
 }
 
-function getKeyDisplay(key: AnyKey): { name: string; detail: string } {
+function getKeyDisplay(key: StoredKey): { name: string; detail: string } {
   const userId = displayUserId(key);
   if (!userId) return { name: key.keyId.slice(-8).toUpperCase(), detail: "" };
   return formatKeyDisplayName(userId);
@@ -61,8 +56,6 @@ export function KeySelector({
   emptyAction,
   emptyActionLabel,
   inline = false,
-  detailsContacts = contacts,
-  detailsOwnKeys = myKeys,
 }: KeySelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -212,14 +205,7 @@ export function KeySelector({
           </PopoverTrigger>
           {list}
         </Popover>
-        {selectedKey && (
-          <KeyDetailsButton
-            keyData={selectedKey}
-            subtle
-            contacts={detailsContacts}
-            ownKeys={detailsOwnKeys}
-          />
-        )}
+        {selectedKey && <KeyDetailsButton keyData={selectedKey} subtle />}
       </div>
     );
   }
@@ -262,13 +248,7 @@ export function KeySelector({
           </PopoverTrigger>
           {list}
         </Popover>
-        {selectedKey && (
-          <KeyDetailsButton
-            keyData={selectedKey}
-            contacts={detailsContacts}
-            ownKeys={detailsOwnKeys}
-          />
-        )}
+        {selectedKey && <KeyDetailsButton keyData={selectedKey} />}
       </div>
     </div>
   );
@@ -279,7 +259,7 @@ function KeyOption({
   selected,
   onSelect,
 }: {
-  keyData: AnyKey;
+  keyData: StoredKey;
   selected: boolean;
   onSelect: () => void;
 }) {

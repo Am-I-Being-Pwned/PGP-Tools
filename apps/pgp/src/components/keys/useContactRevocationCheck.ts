@@ -1,4 +1,4 @@
-import { useContacts } from "~/hooks/useContacts";
+import { useContacts } from "~/hooks";
 import { presentError } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";
 import { KEYSERVER_HOST, keyserverFailureCopy } from "~/lib/import/keyserver";

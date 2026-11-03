@@ -6,7 +6,7 @@ import {
   openThenReseal,
   type KeyHandleEntry,
   type KeySessionStoreDeps,
-} from "~/hooks/useKeySession";
+} from "~/hooks";
 
 const wasm = vi.hoisted(() => ({ dropKey: vi.fn(() => Promise.resolve()) }));
 const age = vi.hoisted(() => ({

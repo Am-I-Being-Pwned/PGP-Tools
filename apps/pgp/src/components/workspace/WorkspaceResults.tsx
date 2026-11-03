@@ -4,16 +4,16 @@ import { SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { Alert, AlertDescription, Button } from "@amibeingpwned/ui";
 
 import { KeyDetailsButton } from "~/components/keys/KeyDetailsButton";
+import { useContacts, useKeyring } from "~/hooks";
 import type { PresentedError, RemedyAction } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";
 import { KEYSERVER_HOST } from "~/lib/import/keyserver";
-import type { PublicContactKey } from "~/lib/storage/contacts";
-import type { ProtectedKeyBlob } from "~/lib/storage/keyring";
-import type { FileResult } from "~/lib/utils/download";
 import { DetectedKeyBanner } from "./DetectedKeyBanner";
 import { OutputArea } from "./OutputArea";
 import { signerCardState } from "./signer-card";
 import { SignerCard } from "./SignerCard";
+import type { Workspace } from "./useWorkspace";
+import type { WorkspaceFlags } from "./workspace-view";
 
 function ErrorAlert({
   error,
@@ -68,77 +68,44 @@ function ErrorAlert({
 }
 
 interface WorkspaceResultsProps {
-  error: PresentedError | null;
+  ws: Workspace;
+  v: WorkspaceFlags;
   /** When absent, remedies render as message-only guidance. */
   onRemedy?: (action: RemedyAction) => void;
-  /** Uncontrolled result node + reader; see `OutputArea`. */
-  outputElRef: React.MutableRefObject<HTMLPreElement | null>;
-  getOutput: () => string;
-  hasOutput: boolean;
-  binaryOutput: Uint8Array | undefined;
-  fileResults: FileResult[];
-  fileName: string;
-  operationDone: boolean;
-  statusText: string | undefined;
-  verifiedSigner: PublicContactKey | ProtectedKeyBlob | null;
-  /** Orange = signed but signer's key not held. */
-  signatureTone?: "success" | "warning";
-  signatureNote?: string | null;
-  /** Good signature with a caveat (retired key, signed for someone else):
-   *  the amber card's label. Not the "unknown signer" card. */
-  signerCaveat?: string | null;
   fullHeight?: boolean;
-  contacts: PublicContactKey[];
-  /** A signer wearing the user's identity is marked like a contact impostor. */
-  myKeys?: ProtectedKeyBlob[];
   translationFooter?: React.ReactNode;
   resultCorner?: React.ReactNode;
   showTranslation?: boolean;
-  translationElRef?: React.MutableRefObject<HTMLPreElement | null>;
-  getTranslation?: () => string;
-  outputPublicKeyDetected: boolean;
-  outputVersion: number;
-  onImportKey: (armored: string) => void;
-  onRevealKey?: (keyId: string) => void;
   onLookupSigner?: (keyId: string) => void;
 }
 
 export function WorkspaceResults({
-  error,
+  ws,
+  v,
   onRemedy,
-  outputElRef,
-  getOutput,
-  hasOutput,
-  binaryOutput,
-  fileResults,
-  fileName,
-  operationDone,
-  statusText,
-  verifiedSigner,
-  signatureTone = "success",
-  signatureNote,
-  signerCaveat = null,
   fullHeight,
-  contacts,
-  myKeys = [],
   translationFooter,
   resultCorner,
   showTranslation,
-  translationElRef,
-  getTranslation,
-  outputPublicKeyDetected,
-  outputVersion,
-  onImportKey,
-  onRevealKey,
   onLookupSigner,
 }: WorkspaceResultsProps) {
+  const { result, output } = ws.state;
+  const { error, hasOutputText: hasOutput, done: operationDone } = v;
+  const verdict = result.verdict;
+  const verifiedSigner = verdict?.signer ?? null;
+  const statusText = result.status ?? undefined;
+  const binaryOutput = result.binary;
+  const fileResults = result.files;
+  const { getOutput } = ws;
+  const { contacts } = useContacts();
+  const { keys: myKeys } = useKeyring();
   // The same state Reply hands its reader tab (see `SignerCard`).
   const card = verifiedSigner
     ? signerCardState({
         signer: verifiedSigner,
-        tone: signatureTone,
-        note: signatureNote,
-        caveat: signerCaveat,
+        tone: verdict?.tone ?? "success",
+        note: verdict?.note,
+        caveat: verdict?.caveat ?? null,
         statusText,
         // A machine translation is not what was signed.
         extraNote: showTranslation
@@ -171,12 +138,7 @@ export function WorkspaceResults({
           // Only for a key we hold: an unknown signer is a bare key id.
           labelAction={
             isUnverified ? undefined : (
-              <KeyDetailsButton
-                keyData={verifiedSigner}
-                subtle
-                contacts={contacts}
-                ownKeys={myKeys}
-              />
+              <KeyDetailsButton keyData={verifiedSigner} subtle />
             )
           }
           noteAction={
@@ -209,30 +171,27 @@ export function WorkspaceResults({
       {verifiedSigner && !signerInCard && signerCard}
 
       <OutputArea
-        outputElRef={outputElRef}
+        outputElRef={ws.outputElRef}
         getOutput={getOutput}
         hasOutput={hasOutput}
         binaryOutput={binaryOutput}
         fileResults={fileResults}
-        fileName={fileName}
+        fileName={ws.outputName()}
         success={operationDone}
         statusText={verifiedSigner ? undefined : statusText}
         fullHeight={fullHeight}
         showTranslation={showTranslation}
-        translationElRef={translationElRef}
-        getTranslation={getTranslation}
+        translationElRef={ws.translationElRef}
+        getTranslation={ws.getTranslation}
         footer={translationFooter}
         corner={resultCorner}
         header={signerInCard ? signerCard : undefined}
       />
 
-      {outputPublicKeyDetected && (
+      {output.publicKey && (
         <DetectedKeyBanner
           getText={getOutput}
-          version={outputVersion}
-          contacts={contacts}
-          onImport={onImportKey}
-          onReveal={onRevealKey}
+          version={output.version}
           source="message"
         />
       )}

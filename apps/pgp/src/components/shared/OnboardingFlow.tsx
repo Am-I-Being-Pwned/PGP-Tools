@@ -11,7 +11,7 @@ import {
 } from "~/components/keys/KeyIdentityFields";
 import { ProtectionMethodPicker } from "~/components/keys/ProtectionMethodPicker";
 import { useProtectionChoice } from "~/components/keys/useProtectionChoice";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useAsyncAction } from "~/hooks";
 import { toBase64, unpackIvCiphertext } from "~/lib/encoding";
 import { presentError } from "~/lib/errors/present";
 import { t } from "~/lib/i18n";

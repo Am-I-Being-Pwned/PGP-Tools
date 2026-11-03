@@ -6,7 +6,7 @@ import { ImportReview } from "~/components/keys/ImportReview";
 import { ProtectionMethodPicker } from "~/components/keys/ProtectionMethodPicker";
 import { useProtectionChoice } from "~/components/keys/useProtectionChoice";
 import { SubPage, type SubPageAction } from "~/components/shared/SubPage";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
+import { useAsyncAction } from "~/hooks";
 import { splitArmoredKeyBlocks } from "~/lib/armor-blocks";
 import { parseCrxKeyBlocks } from "~/lib/crx/backup";
 import {

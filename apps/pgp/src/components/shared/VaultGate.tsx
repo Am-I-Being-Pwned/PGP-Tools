@@ -2,9 +2,8 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
 import { Button } from "@amibeingpwned/ui";
 
-import { useContacts } from "~/hooks/useContacts";
-import { useKeyring } from "~/hooks/useKeyring";
-import type { VaultServices } from "~/hooks/useVault";
+import { useContacts, useKeyring, type VaultServices } from "~/hooks";
+import { MESSAGE_INPUT_ID } from "~/lib/constants";
 import { normalizeCrxPadding } from "~/lib/crx/storage";
 import { t } from "~/lib/i18n";
 import {
@@ -81,7 +80,7 @@ export function VaultGate({
     if (focusedRef.current || !open) return;
     focusedRef.current = true;
     const timer = setTimeout(
-      () => document.getElementById("pgp-input")?.focus(),
+      () => document.getElementById(MESSAGE_INPUT_ID)?.focus(),
       0,
     );
     return () => clearTimeout(timer);

@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent } from "react";
 
-import { useVault } from "~/hooks/useVault";
+import { useVault } from "~/hooks";
 import type { Workspace } from "./useWorkspace";
 
 const KEY_PICK_GRACE_MS = 2_000;

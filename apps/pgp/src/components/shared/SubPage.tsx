@@ -2,9 +2,7 @@ import { useState } from "react";
 
 import { Button, type ShortcutSpec } from "@amibeingpwned/ui";
 
-import { useAsyncAction } from "~/hooks/useAsyncAction";
-import { useDelayedFlag } from "~/hooks/useDelayedFlag";
-import { useShortcut } from "~/hooks/useShortcut";
+import { useAsyncAction, useDelayedFlag, useShortcut } from "~/hooks";
 import { t } from "~/lib/i18n";
 import { SlideOverHeader, SlideOverPanel, useSlideOver } from "./SlideOver";
 

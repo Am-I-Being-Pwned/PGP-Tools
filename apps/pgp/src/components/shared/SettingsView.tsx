@@ -17,13 +17,16 @@ import { ImportFlowPreviewPage } from "~/components/settings/ImportFlowPreviewPa
 import { KeyboardShortcutsPage } from "~/components/settings/KeyboardShortcutsPage";
 import { SecurityPresetPage } from "~/components/settings/SecurityPresetPage";
 import { TranslationPage } from "~/components/settings/TranslationPage";
-import { useAsyncAction } from "~/hooks/useAsyncAction";
-import { useContacts } from "~/hooks/useContacts";
-import { useCrxKeys } from "~/hooks/useCrxKeys";
-import { useKeyring } from "~/hooks/useKeyring";
-import { useNav } from "~/hooks/useNav";
-import { savePreference, usePreferences } from "~/hooks/usePreferences";
-import { useVault } from "~/hooks/useVault";
+import {
+  savePreference,
+  useAsyncAction,
+  useContacts,
+  useCrxKeys,
+  useKeyring,
+  useNavIntent,
+  usePreferences,
+  useVault,
+} from "~/hooks";
 import { t, tn } from "~/lib/i18n";
 import { enterNeverCacheMode } from "~/lib/never-cache";
 import {
@@ -114,8 +117,6 @@ export function SettingsView() {
   const contactStore = useContacts();
   const crx = useCrxKeys();
   const { session, ...vault } = useVault();
-  const appNav = useNav();
-  const consumeIntent = appNav.consume;
   const prefs = usePreferences();
   const {
     advancedMode,
@@ -138,14 +139,9 @@ export function SettingsView() {
       : errorMessage(e, t("shared_migration_failed")),
   }));
   const nav = useNavStack<SettingsRoute>();
-  const navPush = nav.push;
 
   // The palette's "security presets" action lands here.
-  useEffect(() => {
-    if (!appNav.presets) return;
-    navPush({ page: "presets" });
-    consumeIntent("presets");
-  }, [appNav.presets, consumeIntent, navPush]);
+  useNavIntent("presets", () => nav.push({ page: "presets" }));
 
   const currentPreset = activePreset(prefs);
 

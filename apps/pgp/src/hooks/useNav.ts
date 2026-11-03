@@ -1,4 +1,12 @@
-import { createContext, use, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  use,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { toast } from "~/lib/toast";
 
@@ -16,7 +24,8 @@ export interface NavState {
   encryptToKeyId: string | null;
 }
 
-type Intent = "highlightKeyIds" | "keysRoute" | "presets" | "encryptToKeyId";
+export type Intent =
+  "highlightKeyIds" | "keysRoute" | "presets" | "encryptToKeyId";
 
 const CLEARED: Pick<NavState, Intent> = {
   highlightKeyIds: null,
@@ -92,4 +101,22 @@ export function useNav(): Nav {
   const nav = use(NavContext);
   if (!nav) throw new Error("useNav outside the panel");
   return nav;
+}
+
+/** Take a one-shot intent once the receiving view is mounted: it is held
+ *  in nav state until then, so a view that mounts after the request (the
+ *  Keys tab) still sees it. */
+export function useNavIntent<I extends Intent>(
+  intent: I,
+  onIntent: (value: Exclude<NavState[I], null | false>) => void,
+): void {
+  const nav = useNav();
+  const value: NavState[I] = nav[intent];
+  const { consume } = nav;
+  const take = useEffectEvent(onIntent);
+  useEffect(() => {
+    if (!value) return;
+    take(value as Exclude<NavState[I], null | false>);
+    consume(intent);
+  }, [value, intent, consume]);
 }
