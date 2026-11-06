@@ -67,7 +67,7 @@ function sameSnapshot(
   );
 }
 
-export function createWorkspaceBridge(): WorkspaceBridge {
+function createWorkspaceBridge(): WorkspaceBridge {
   let snapshot: WorkspaceSnapshot | null = null;
   let commands: WorkspaceCommands | null = null;
   const listeners = new Set<() => void>();

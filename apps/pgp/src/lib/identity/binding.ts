@@ -25,7 +25,7 @@ function unquoteLocalParts(text: string): string {
  * with every character that draws nothing (`INVISIBLE`) removed. Catches
  * what the engine's own stripping missed (older records, other text).
  */
-export function readableForm(text: string): string {
+function readableForm(text: string): string {
   return stripInvisible(text.normalize("NFKC"));
 }
 
@@ -121,7 +121,7 @@ export function addressSkeletons(address: string): string[] {
   ].filter(Boolean);
 }
 
-export function nameSkeletons(name: string): string[] {
+function nameSkeletons(name: string): string[] {
   return [
     ...new Set([nameSkeleton(name, "i"), nameSkeleton(name, "l")]),
   ].filter(Boolean);

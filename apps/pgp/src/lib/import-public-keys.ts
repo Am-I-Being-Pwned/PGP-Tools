@@ -112,7 +112,7 @@ export async function applyRevocation(
   return mergeIntoStored(match, text);
 }
 
-export function contactFieldsFrom(
+function contactFieldsFrom(
   keyInfo: KeyInfo,
 ): Pick<
   PublicContactKey,

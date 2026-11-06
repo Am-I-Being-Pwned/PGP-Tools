@@ -8,7 +8,7 @@ import { isSshRecord } from "./key-kind";
 
 /** Fields older versions never stored, derived once per record, each patch
  *  via `updateContact` (inside the lock). */
-export function needsBackfill(c: PublicContactKey): boolean {
+function needsBackfill(c: PublicContactKey): boolean {
   return (
     c.expiresAt === undefined || (c.identityVersion ?? 0) < IDENTITY_VERSION
   );

@@ -7,8 +7,7 @@
 
 /** GitHub's rule: alphanumerics and single inner hyphens, max 39. Admits
  *  no `/.%?#@\` or whitespace. */
-export const GITHUB_USERNAME =
-  /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
+const GITHUB_USERNAME = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 
 export function isGithubUsername(s: unknown): s is string {
   return typeof s === "string" && GITHUB_USERNAME.test(s);

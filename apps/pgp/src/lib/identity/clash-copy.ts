@@ -9,7 +9,7 @@ import {
 } from "./binding";
 
 /** By the user's name for it when set (a comment-less SSH key has no other). */
-export function clashHolderArgs(holder: IdentityHolder): {
+function clashHolderArgs(holder: IdentityHolder): {
   name: string;
   keyid: string;
 } {

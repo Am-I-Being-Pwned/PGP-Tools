@@ -3,7 +3,6 @@ export * from "./alert";
 export * from "./block";
 export * from "./button";
 export * from "./calendar";
-export * from "./checkbox";
 export * from "./command";
 export * from "./dropdown-menu";
 export * from "./input";

@@ -94,7 +94,7 @@ export function displayOnlySignerCard(state: SignerCardState): SignerCardState {
   };
 }
 
-export function signerAsContact(signer: StoredKey): PublicContactKey {
+function signerAsContact(signer: StoredKey): PublicContactKey {
   return isContact(signer)
     ? signer
     : {

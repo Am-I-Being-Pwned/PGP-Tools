@@ -32,7 +32,7 @@ type View = WorkspaceFlags;
 type Engine = ReturnType<typeof selectionEngine>;
 
 /** mod+Enter mirrors the main action button. */
-export const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
+const RUN_SHORTCUT: ShortcutSpec = { mod: true, key: "Enter" };
 
 /** The preference-backed encrypt toggles; the palette runs the same code. */
 export function useEncryptToggles(ws: Ws) {

@@ -44,7 +44,7 @@ export type KeyserverSend = (
   request: KeyserverKeyRequest,
 ) => Promise<KeyserverKeyResponse | undefined>;
 
-export const sendToWorker: KeyserverSend = (request) =>
+const sendToWorker: KeyserverSend = (request) =>
   chrome.runtime.sendMessage<
     KeyserverKeyRequest,
     KeyserverKeyResponse | undefined

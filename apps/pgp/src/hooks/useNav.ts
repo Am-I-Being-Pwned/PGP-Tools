@@ -11,7 +11,7 @@ import {
 import { toast } from "~/lib/toast";
 
 export type Tab = "workspace" | "keys" | "settings";
-export type KeysRoute = "generate" | "import";
+type KeysRoute = "generate" | "import";
 
 /** Where the panel is, plus one-shot requests a view clears with `consume`. */
 export interface NavState {

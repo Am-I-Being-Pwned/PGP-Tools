@@ -2,7 +2,7 @@ import type { KeyserverQuery } from "./keyserver/query";
 
 export type WorkspaceAction = "encrypt" | "decrypt" | "sign" | "verify";
 
-export type ImportAction = "import-public" | "import-private";
+type ImportAction = "import-public" | "import-private";
 
 export type OperationAction = WorkspaceAction | ImportAction;
 

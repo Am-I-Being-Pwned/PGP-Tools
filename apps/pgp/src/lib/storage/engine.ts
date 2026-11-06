@@ -1,5 +1,5 @@
 import { STORAGE_DEVICE_LOCATION, STORAGE_PREFERENCES } from "~/lib/constants";
-import { getChunked, removeChunked, setChunked } from "./chunked";
+import { getChunked, setChunked } from "./chunked";
 import type { StorageLocation } from "./preferences";
 
 /**
@@ -147,9 +147,4 @@ export async function setItem<T>(key: string, value: T): Promise<void> {
   const loc = await resolveLocation();
   // Chunk on `sync`; verbatim on `local` so padding survives.
   await setChunked(area(loc), key, value, loc === "sync");
-}
-
-export async function removeItem(key: string): Promise<void> {
-  const loc = await resolveLocation();
-  await removeChunked(area(loc), key);
 }

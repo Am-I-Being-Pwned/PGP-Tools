@@ -8,7 +8,7 @@ import { PENDING_KEY_ID, type IncomingKey } from "./types";
 
 /** A raw RSA private key PEM (CRX signing key). Never a PGP armored block, and
  *  never legacy `Proc-Type: 4,ENCRYPTED` (left for the age engine's message). */
-export const RSA_PEM_RE = /-----BEGIN (?:RSA )?PRIVATE KEY-----/;
+const RSA_PEM_RE = /-----BEGIN (?:RSA )?PRIVATE KEY-----/;
 export function isRsaPrivatePem(text: string): boolean {
   return (
     RSA_PEM_RE.test(text) &&
@@ -66,12 +66,12 @@ export function sshPublicKey(
 }
 
 /** Longest SSH comment shown or compared, as the engine caps it. */
-export const SSH_COMMENT_MAX = 120;
+const SSH_COMMENT_MAX = 120;
 
 /** Strip control/invisible chars, trim, cap. Duplicates the engine's
  *  `sanitize_comment` on purpose: this attacker-supplied text becomes a
  *  contact name, so don't depend on the engine build. */
-export function cleanSshComment(comment: string): string {
+function cleanSshComment(comment: string): string {
   const clean = stripInvisible(comment).trim();
   return [...clean].length > SSH_COMMENT_MAX
     ? `${[...clean].slice(0, SSH_COMMENT_MAX).join("")}\u2026`

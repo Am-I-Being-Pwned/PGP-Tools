@@ -19,7 +19,7 @@ function onStoreChanged(storageKey: string, listener: Listener): () => void {
   return () => set.delete(listener);
 }
 
-export interface ListState<T> {
+interface ListState<T> {
   items: T[];
   loading: boolean;
   /** NOT the same as empty: an unreadable keyring must never show as "no keys". */

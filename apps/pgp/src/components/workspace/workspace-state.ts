@@ -56,7 +56,7 @@ export function textFacts(text: string): TextFacts {
 
 const NO_TEXT: TextFacts = textFacts("");
 
-export interface Verdict {
+interface Verdict {
   signer: StoredKey;
   tone: "success" | "warning";
   note: string | null;
@@ -72,7 +72,7 @@ export interface RunResult {
   files: FileResult[];
 }
 
-export type Run =
+type Run =
   | { kind: "idle" }
   | { kind: "running"; autoRun: boolean }
   | { kind: "done" }
@@ -80,9 +80,9 @@ export type Run =
   | { kind: "held-back" }
   | { kind: "hidden-chars"; chars: string[] };
 
-export type PromptKind = "key" | "message" | "crx";
+type PromptKind = "key" | "message" | "crx";
 
-export interface Prompt {
+interface Prompt {
   kind: PromptKind;
   /** The key a "key" prompt unlocks: the one the run asked for, which
    *  for a signed encrypt need not be the selected key. */
@@ -452,9 +452,6 @@ export function workspaceReducer(
       return { ...s, encryptPassword: "", passwordDialogOpen: false };
   }
 }
-
-export const isRunning = (s: WorkspaceState) => s.run.kind === "running";
-export const isDone = (s: WorkspaceState) => s.run.kind === "done";
 
 export function inputIsAge(s: WorkspaceState): boolean {
   return s.input.age || s.files.some((f) => /\.age$/i.test(f.name));

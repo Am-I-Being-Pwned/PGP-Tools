@@ -14,9 +14,9 @@
  * bound the needle offset and carry a positive control (see
  * `tests/e2e/crx-memory.spec.ts`).
  */
-export type EvidencePath = string;
+type EvidencePath = string;
 
-export type ThreatStatus =
+type ThreatStatus =
   | "defended"
   /** We defend part of it; the gap is real and stated in `rationale`. */
   | "partial"

@@ -25,7 +25,7 @@ function utf8ByteLength(text: string): number {
 }
 
 /** Failures a parsed response can produce. */
-export type GithubKeysParseFailure = Exclude<
+type GithubKeysParseFailure = Exclude<
   GithubKeysFailure,
   "invalid-username" | "offline"
 >;

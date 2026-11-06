@@ -118,7 +118,7 @@ function isLedger(v: unknown): v is Ledger {
   );
 }
 
-export type IntegrityIssueKind =
+type IntegrityIssueKind =
   /** The store loaded with a generation below this device's mark. */
   | "rolled-back"
   /** No generation although this device recorded one: an un-updated 2.0.x

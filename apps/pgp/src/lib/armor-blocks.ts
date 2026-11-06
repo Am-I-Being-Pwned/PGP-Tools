@@ -23,17 +23,17 @@ export function splitPublicKeyBlocks(text: string): string[] {
   return matchAll(text, PUBLIC_BLOCK);
 }
 
-export function splitPrivateKeyBlocks(text: string): string[] {
+function splitPrivateKeyBlocks(text: string): string[] {
   return matchAll(text, PRIVATE_BLOCK);
 }
 
 // ── age / SSH markers ────────────────────────────────────────────────
 
-export const AGE_ARMOR_BEGIN = "-----BEGIN AGE ENCRYPTED FILE-----";
+const AGE_ARMOR_BEGIN = "-----BEGIN AGE ENCRYPTED FILE-----";
 
 /** First line of a binary age file; the literal the Rust sniffer
  *  (`is_age_message`) checks. */
-export const AGE_BINARY_MAGIC = "age-encryption.org/v1";
+const AGE_BINARY_MAGIC = "age-encryption.org/v1";
 
 /** The only label OpenSSH emits for a private key; encrypted or not
  *  can't be told from the header. */
