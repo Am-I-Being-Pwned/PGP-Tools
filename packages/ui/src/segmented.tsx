@@ -3,7 +3,7 @@ import { useRef } from "react";
 
 import { cn } from "./cn";
 
-export interface SegmentedOption<T extends string> {
+interface SegmentedOption<T extends string> {
   value: T;
   label: React.ReactNode;
   /** When `label` is not plain text. */

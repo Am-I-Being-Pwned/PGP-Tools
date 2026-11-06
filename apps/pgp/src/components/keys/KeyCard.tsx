@@ -39,7 +39,7 @@ import { selId } from "./keys-routes";
 import { UnlockPasswordField } from "./KeyUnlockRow";
 
 /** Absent ⇒ sealed at rest (CRX): no unlock UI. */
-export interface KeyCardSession {
+interface KeyCardSession {
   isUnlocked: boolean;
   unlockWithPassword: (password: string) => Promise<boolean>;
   unlockWithPasskey: () => Promise<boolean | "cancelled">;

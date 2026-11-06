@@ -63,7 +63,7 @@ export interface KeySessionStoreDeps {
   onActivity: () => void;
 }
 
-export interface UnlockEntry {
+interface UnlockEntry {
   keyId: string;
   kind: StoredKeyKind;
   open: () => Promise<number>;

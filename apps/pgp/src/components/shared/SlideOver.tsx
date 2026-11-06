@@ -6,7 +6,7 @@ import { tabbable } from "tabbable";
 import { t } from "~/lib/i18n";
 
 /** Must match the `duration-300` class on the panel. */
-export const SLIDE_MS = 300;
+const SLIDE_MS = 300;
 
 // Slide-overs stack; Escape closes only the topmost.
 const openStack: symbol[] = [];

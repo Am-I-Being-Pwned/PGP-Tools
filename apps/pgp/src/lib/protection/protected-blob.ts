@@ -4,14 +4,14 @@
  * secret (salts and HKDF secret are stored in the clear by design).
  */
 
-export interface PasswordProtection {
+interface PasswordProtection {
   method: "password";
   kdfSalt: string; // base64 (Argon2id salt)
 }
 
 /** `storedSecret` is fresh per blob so two blobs off one ceremony still
  *  get distinct AES keys. */
-export interface PasskeyProtection {
+interface PasskeyProtection {
   method: "passkey";
   credentialId: string; // base64url
   prfSalt: string; // base64

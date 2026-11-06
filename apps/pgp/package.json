@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@amibeingpwned/ui": "workspace:*",
-    "date-fns": "^4.4.0",
     "fflate": "^0.8.3",
     "focus-trap": "^8.2.3",
     "lucide-react": "^1.61.0",
@@ -46,7 +45,6 @@
     "@amibeingpwned/eslint-config": "workspace:*",
     "@amibeingpwned/prettier-config": "workspace:*",
     "@amibeingpwned/tailwind-config": "workspace:*",
-    "@amibeingpwned/tsconfig": "workspace:*",
     "@babel/parser": "^8.0.8",
     "@babel/traverse": "^8.0.7",
     "@playwright/test": "^1.64.1",

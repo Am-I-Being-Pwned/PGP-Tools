@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export const DEFAULT_DELAY_MS = 150;
+const DEFAULT_DELAY_MS = 150;
 
 /** Framework-free core of {@link useDelayedFlag}, for unit tests. */
 export function createDelayedFlag(

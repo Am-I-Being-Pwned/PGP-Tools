@@ -1,9 +1,5 @@
 import { fromBase64 } from "~/lib/encoding";
-import type {
-  KeyProtection,
-  PasskeyProtection,
-  PasswordProtection,
-} from "~/lib/protection/protected-blob";
+import type { KeyProtection } from "~/lib/protection/protected-blob";
 
 /**
  * Stored CRX signing key. Sealed like a PGP key, AAD-bound via
@@ -12,8 +8,6 @@ import type {
  */
 
 /** The shared seal union from `protection/protected-blob.ts`. */
-export type CrxPasswordProtection = PasswordProtection;
-export type CrxPasskeyProtection = PasskeyProtection;
 export type CrxProtection = KeyProtection;
 
 export interface CrxSigningKeyBlob {

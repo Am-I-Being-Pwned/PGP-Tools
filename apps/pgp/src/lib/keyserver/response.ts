@@ -14,12 +14,12 @@ import type { KeyserverKeyFailure } from "~/lib/messages";
  *  `MAX_CERTS` is 1: every by-* endpoint names a single cert, so extras are
  *  counted and dropped, never forwarded. */
 export const MAX_BODY_BYTES = 128 * 1024;
-export const MAX_CERTS = 1;
+const MAX_CERTS = 1;
 
 /** Bound on a hostile `retry-after`. */
 const MAX_RETRY_AFTER_MS = 24 * 60 * 60 * 1000;
 
-export type KeyserverParseFailure = Exclude<
+type KeyserverParseFailure = Exclude<
   KeyserverKeyFailure,
   "invalid-query" | "offline"
 >;

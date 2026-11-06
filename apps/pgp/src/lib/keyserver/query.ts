@@ -5,7 +5,7 @@
  * strict shapes below stop this being an arbitrary-GET primitive.
  */
 
-export type KeyserverQueryKind = "email" | "fingerprint" | "keyid";
+type KeyserverQueryKind = "email" | "fingerprint" | "keyid";
 
 export interface KeyserverQuery {
   kind: KeyserverQueryKind;

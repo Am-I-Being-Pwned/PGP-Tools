@@ -99,7 +99,7 @@ export async function encrypt(
   );
 }
 
-export interface SignatureInfo extends SignatureDetails {
+interface SignatureInfo extends SignatureDetails {
   signatureValid: boolean | null;
   signatureStatus: SignatureStatus;
   signerKeyId: string | null;
@@ -422,15 +422,8 @@ export async function decryptStore(
 }
 
 // ── legacy (pre-v1) shared envelope ─────────────────────────────────
-// `decryptContacts` is the migration read path; `encryptContacts` is for
-// tests only. Production must not write this format -- use `encryptStore`.
-
-export async function encryptContacts(
-  plaintext: Uint8Array,
-): Promise<Uint8Array> {
-  const wasm = await loadWasm();
-  return wasm.encryptContacts(plaintext);
-}
+// `decryptContacts` is the migration read path. Production must not write
+// this format -- use `encryptStore`.
 
 export async function decryptContacts(
   ciphertext: Uint8Array,

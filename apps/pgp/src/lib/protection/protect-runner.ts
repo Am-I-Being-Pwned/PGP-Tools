@@ -58,7 +58,7 @@ export interface PackedProtectResult {
   blob: Uint8Array;
 }
 
-export interface PrfMaterial {
+interface PrfMaterial {
   credentialId: string;
   prfSalt: ArrayBuffer;
   /** Live PRF output. Do NOT retain past the assembler call. */

@@ -73,9 +73,6 @@ importers:
       '@amibeingpwned/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      date-fns:
-        specifier: ^4.4.0
-        version: 4.4.0
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
@@ -107,9 +104,6 @@ importers:
       '@amibeingpwned/tailwind-config':
         specifier: workspace:*
         version: link:../../tooling/tailwind
-      '@amibeingpwned/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
       '@babel/parser':
         specifier: ^8.0.8
         version: 8.0.8

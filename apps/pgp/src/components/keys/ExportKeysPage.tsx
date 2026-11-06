@@ -28,7 +28,7 @@ import { KeyUnlockRow } from "./KeyUnlockRow";
 
 type Step = "unlock" | "export";
 
-export interface ExportKeysProps {
+interface ExportKeysProps {
   myKeys: ProtectedKeyBlob[];
   contacts: PublicContactKey[];
   crxKeys?: CrxSigningKeyBlob[];

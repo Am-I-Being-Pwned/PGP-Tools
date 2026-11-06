@@ -118,7 +118,7 @@ export function pgpSignerId(c: RunContext): string | null {
   return pgpKeys[0]?.keyId ?? null;
 }
 
-export function findSigner(c: RunContext, signerKeyId: string | null) {
+function findSigner(c: RunContext, signerKeyId: string | null) {
   if (!signerKeyId) return null;
   const hex = signerKeyId.toUpperCase();
   // Any of a contact's keys, not only the first.
@@ -131,13 +131,13 @@ export function findSigner(c: RunContext, signerKeyId: string | null) {
   );
 }
 
-export function signerName(c: RunContext, keyId: string): string {
+function signerName(c: RunContext, keyId: string): string {
   const signer = findSigner(c, keyId);
   const userId = signer ? displayUserId(signer) : undefined;
   return userId ? parseUserId(userId).name : keyId.slice(-16);
 }
 
-export function placeholderSigner(
+function placeholderSigner(
   keyId: string,
   name = t("workspace_unknown_signer"),
 ): PublicContactKey {
@@ -302,7 +302,7 @@ export function stagedFiles(c: RunContext): File[] {
   return [...c.files, new File([c.getInput()], name, { type: "text/plain" })];
 }
 
-export function messageFileName(c: RunContext): string | null {
+function messageFileName(c: RunContext): string | null {
   if (c.mode !== "encrypt" || c.files.length === 0 || !c.hasText) return null;
   const taken = new Set(c.files.map((f) => f.name));
   let name = "msg.txt";

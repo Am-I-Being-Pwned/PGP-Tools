@@ -25,13 +25,13 @@ export interface ProtectedStoreDescriptor<T> extends EncryptedStore<T> {
  * return `false` to skip. Required for stores mutable while locked: a
  * locked load returns `[]`, and saving that would wipe every key.
  */
-export type MutationGuard = () => Promise<boolean>;
+type MutationGuard = () => Promise<boolean>;
 
-export interface MutateOptions {
+interface MutateOptions {
   guard?: MutationGuard;
 }
 
-export interface UpdateOptions extends MutateOptions {
+interface UpdateOptions extends MutateOptions {
   /** Called (inside the lock) when no item has the id; default no-op. Pass
    *  a thrower when the caller reports success to the user. */
   onMissing?: (id: string) => never;

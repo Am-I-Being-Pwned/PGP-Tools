@@ -45,7 +45,3 @@ export function dumpWasmMemoryForDev(): Uint8Array | null {
   if (!wasmMemory) return null;
   return new Uint8Array(wasmMemory.buffer).slice();
 }
-
-export async function initPgpWasm(): Promise<void> {
-  await loadWasm();
-}

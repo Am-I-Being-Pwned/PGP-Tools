@@ -34,33 +34,6 @@ export type ProtectFlowResult = MetaBlob<ProtectResultMeta>;
 
 const unpackProtectResult = unpackMetaBlob<ProtectResultMeta>;
 
-// ── Argon2id ─────────────────────────────────────────────────────────
-
-/**
- * @secret-handling
- *   in:  password bytes
- *   out: derived AES key bytes
- *   contract: caller MUST `.fill(0)` both `password` and the returned
- *             buffer. Prefer the protect-flows, which keep the key in wasm.
- */
-export async function argon2Derive(
-  password: Uint8Array,
-  salt: Uint8Array,
-  memoryKib: number,
-  iterations: number,
-  parallelism: number,
-): Promise<Uint8Array> {
-  const wasm = await loadWasm();
-  const result = wasm.argon2Derive(
-    password,
-    salt,
-    memoryKib,
-    iterations,
-    parallelism,
-  );
-  return new Uint8Array(result);
-}
-
 // ── generate + protect (atomic; cert lives only in this call) ────────
 
 /**
@@ -393,11 +366,6 @@ export async function initDraftSessionIfUnset(): Promise<void> {
   wasm.initDraftSessionIfUnset();
 }
 
-export async function dropDraftSession(): Promise<void> {
-  const wasm = await loadWasm();
-  wasm.dropDraftSession();
-}
-
 /**
  * @secret-handling
  *   in:  plaintext bytes (user's in-progress workspace text)
@@ -425,7 +393,7 @@ export async function decryptDraft(packed: Uint8Array): Promise<Uint8Array> {
 // RSA-2048 key in CRX_KEY_STORE; only its public half crosses to JS.
 // See `gpg-wasm/src/crx.rs`.
 
-export interface CrxProtectMeta {
+interface CrxProtectMeta {
   /** 32-char `a`..`p` extension id derived from the public key. */
   extensionId: string;
   /** SubjectPublicKeyInfo DER, base64 (for the CWS dashboard / PEM). */
@@ -641,7 +609,7 @@ export async function dropCrxKey(handle: number): Promise<void> {
 // deliberately no `getSshIdentityArmored`. See `gpg-wasm/src/age.rs`.
 
 /** All fields derive from the PUBLIC half. */
-export interface SshProtectMeta {
+interface SshProtectMeta {
   /** `SHA256:...`; the AAD-bound identity and stored `keyId`. */
   fingerprint: string;
   /** Canonical `<type> <base64>` recipient line. */

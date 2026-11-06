@@ -20,7 +20,7 @@ export interface SubPageAction {
   closeOnSuccess?: boolean;
 }
 
-export interface SubPageApi {
+interface SubPageApi {
   close: () => void;
   busy: boolean;
   /** No-op while busy or if that action is disabled. */

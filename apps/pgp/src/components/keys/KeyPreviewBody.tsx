@@ -182,7 +182,7 @@ function InfoRow({
 }
 
 /** Small identity chip, e.g. "Contact" or "Passkey". */
-export function Chip({
+function Chip({
   title,
   children,
 }: {

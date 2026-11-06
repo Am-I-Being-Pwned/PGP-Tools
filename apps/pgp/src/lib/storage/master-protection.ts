@@ -27,7 +27,7 @@ interface MasterPasswordProtection {
 export type MasterProtection =
   MasterPasskeyProtection | MasterPasswordProtection;
 
-export function isValidMasterProtection(v: unknown): v is MasterProtection {
+function isValidMasterProtection(v: unknown): v is MasterProtection {
   if (typeof v !== "object" || v === null) return false;
   const o = v as Record<string, unknown>;
   if (o.method === "passkey") {

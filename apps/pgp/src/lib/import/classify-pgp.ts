@@ -11,11 +11,11 @@ import type { StoredKey } from "./stored-keys";
 import { PENDING_KEY_ID, type IncomingKey } from "./types";
 
 /** Line endings and trailing whitespace differ freely between tools emitting the same cert. */
-export function normalizeArmor(armored: string): string {
+function normalizeArmor(armored: string): string {
   return armored.replace(/\r\n/g, "\n").trim();
 }
 
-export async function safeDetails(armored: string): Promise<KeyDetails | null> {
+async function safeDetails(armored: string): Promise<KeyDetails | null> {
   try {
     return await parseKeyDetails(armored);
   } catch {
@@ -23,7 +23,7 @@ export async function safeDetails(armored: string): Promise<KeyDetails | null> {
   }
 }
 
-export async function safeInfo(armored: string): Promise<KeyInfo | null> {
+async function safeInfo(armored: string): Promise<KeyInfo | null> {
   try {
     return (await parseKeys(armored))[0]?.keyInfo ?? null;
   } catch {
@@ -32,7 +32,7 @@ export async function safeInfo(armored: string): Promise<KeyInfo | null> {
 }
 
 /** Subkey changes, which `detectImportOverwrite` can't see (stored metadata has no subkeys). */
-export function subkeyChanges(
+function subkeyChanges(
   incoming: KeyDetails | null,
   stored: KeyDetails | null,
 ): string[] {

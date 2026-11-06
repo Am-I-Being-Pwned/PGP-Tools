@@ -6,7 +6,7 @@ import type { ContactRecipient, ContactSource } from "~/lib/storage/contacts";
 // the preview only renders them.
 
 /** How an incoming key relates to what's already stored. */
-export type ImportStatus =
+type ImportStatus =
   | "new"
   /** Same fingerprint, but the cert has moved on. */
   | "update"

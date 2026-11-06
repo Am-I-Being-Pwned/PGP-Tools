@@ -113,7 +113,7 @@ export function withIdentityConflicts(
 
 /** Private/CRX key conflicts: own keys only count when it LOOKS like theirs
  *  without being it. */
-export function withSecretConflict(
+function withSecretConflict(
   key: IncomingKey,
   holders: readonly IdentityHolder[],
 ): IncomingKey {

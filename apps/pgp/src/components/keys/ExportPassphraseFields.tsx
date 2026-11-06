@@ -26,7 +26,7 @@ export function useExportPassphrase() {
   };
 }
 
-export type ExportPassphrase = ReturnType<typeof useExportPassphrase>;
+type ExportPassphrase = ReturnType<typeof useExportPassphrase>;
 
 interface ExportPassphraseFieldsProps {
   fields: ExportPassphrase;

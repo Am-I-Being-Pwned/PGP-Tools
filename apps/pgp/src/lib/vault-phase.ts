@@ -2,7 +2,7 @@ import type { MasterProtection } from "./storage/master-protection";
 import type { StorageLocation } from "./storage/preferences";
 import type { VaultState } from "./storage/vault-state";
 
-export type VaultProblem = Extract<
+type VaultProblem = Extract<
   VaultState,
   { kind: "elsewhere" | "ambiguous" | "orphaned" }
 >;

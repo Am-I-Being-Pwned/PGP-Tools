@@ -42,7 +42,7 @@ export interface ImportEngines {
 }
 
 /** Placeholder headline; never stored (a blank name imports keys separately). */
-export function proposalLabel(count: number): string {
+function proposalLabel(count: number): string {
   return tn("import_group_proposal_label", count);
 }
 
@@ -85,7 +85,7 @@ export async function prepareImport(
   return { ...prepared, keys: withIdentityConflicts(prepared.keys, stored) };
 }
 
-export async function classifyImport(
+async function classifyImport(
   text: string,
   stored: StoredKeys,
   engines: ImportEngines,
@@ -309,7 +309,7 @@ export async function mergeSameKey(
 }
 
 /** A copy the engine won't merge is left out rather than failing the import. */
-export async function mergeCopies(
+async function mergeCopies(
   copies: IncomingKey[],
   stored: StoredKeys,
 ): Promise<IncomingKey> {
@@ -345,6 +345,5 @@ export function importable(keys: IncomingKey[]): IncomingKey[] {
 }
 
 export { classifyCert } from "./classify-pgp";
-export { sshKeyHolders } from "./classify-ssh";
 export { claimedIds, withIdentityConflicts } from "./conflicts";
 export { storedKeysFrom, type StoredKey, type StoredKeys } from "./stored-keys";

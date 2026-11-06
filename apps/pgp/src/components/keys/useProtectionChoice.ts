@@ -9,7 +9,7 @@ import {
   type ProtectionMethod,
 } from "./protection-choice";
 
-export function getDefaultProtectionMethod(): ProtectionMethod {
+function getDefaultProtectionMethod(): ProtectionMethod {
   return checkPrfSupport() ? "passkey" : "password";
 }
 
@@ -49,5 +49,3 @@ export function useProtectionChoice(ctx: ProtectionContext = {}) {
     },
   };
 }
-
-export type ProtectionChoice = ReturnType<typeof useProtectionChoice>;

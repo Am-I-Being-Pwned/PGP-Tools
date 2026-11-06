@@ -22,7 +22,7 @@ import { baseLanguage, isSupportedLanguage } from "./languages";
 
 /** Below this many characters we don't ask the detector: a confident wrong
  *  answer on short text is worse than none. */
-export const MIN_DETECT_CHARS = 16;
+const MIN_DETECT_CHARS = 16;
 
 /** Confidence floor for acting on a detection. A judgment call, tuned to
  *  prefer "not sure" over a wrong flag. */
